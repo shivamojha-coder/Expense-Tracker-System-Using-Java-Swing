@@ -1,6 +1,6 @@
-# [Project name]
+# Expense Tracker Desktop
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Java Swing desktop application for recording, organizing, analyzing, and reporting personal expenses with optional receipt OCR.
 
 ## Run & Operate
 
@@ -10,6 +10,8 @@ _Replace the heading above with the project's name, and this line with one sente
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
+- `cd expense-tracker-desktop && mvn compile` — compile the Java Swing desktop module
+- `cd expense-tracker-desktop && mvn exec:java` — launch the desktop shell
 
 ## Stack
 
@@ -19,18 +21,29 @@ _Replace the heading above with the project's name, and this line with one sente
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
+- Desktop: Java 19+, Maven, Java Swing, FlatLaf
+- Planned services: Supabase Auth, PostgreSQL, Storage, and RLS
+- Planned OCR: Tess4J/Tesseract
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `expense-tracker-desktop/src/main/java/com/expensetracker/model` — domain models and enums
+- `expense-tracker-desktop/src/main/java/com/expensetracker/ui` — Swing frames and application shell
+- `expense-tracker-desktop/src/main/java/com/expensetracker/service` — business-service interfaces
+- `expense-tracker-desktop/src/main/java/com/expensetracker/repository` — data-access interfaces
+- `expense-tracker-desktop/src/main/java/com/expensetracker/supabase` — Supabase integration boundary
+- `expense-tracker-desktop/pom.xml` — Java dependencies and compiler configuration
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The desktop client remains Java/Swing; no web frontend or separate custom backend is introduced.
+- Swing UI code calls service interfaces rather than constructing database or storage requests.
+- Supabase configuration is read from environment variables and values are never logged.
+- The first increment provides the shell and contracts without faking authenticated or persisted data.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+The product will let a single authenticated user record expenses manually or with optional receipt OCR, review receipts, search and filter expenses, see dashboard analytics, and export/print reports.
 
 ## User preferences
 

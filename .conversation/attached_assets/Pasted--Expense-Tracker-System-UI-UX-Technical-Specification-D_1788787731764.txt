@@ -1,0 +1,1898 @@
+# Expense Tracker System
+
+## UI/UX & Technical Specification
+
+**Document Version:** 1.0
+**Related Document:** 01_PRD.md
+**Application Type:** Java Desktop Application
+**UI Technology:** Java Swing
+**Backend Services:** Supabase
+**Database:** Supabase PostgreSQL
+**Authentication:** Supabase Auth
+**Storage:** Supabase Storage
+**OCR:** Tesseract + Tess4J
+**Build Tool:** Maven
+
+---
+
+# 1. Purpose of This Document
+
+This document defines exactly how the Expense Tracker System should be designed, structured, implemented, and presented to the user. The purpose of this document is to remove ambiguity for AI coding agents and developers by defining the application's user interface, navigation, screen behavior, component responsibilities, application architecture, data flow, coding principles, technology restrictions, validation behavior, loading states, error states, and visual design requirements.
+
+The AI development agent must use this document together with `01_PRD.md`. The PRD defines what the product must do, while this document defines how the product should behave and how the application should be structured. The agent must not invent major UI, architecture, or technology decisions when requirements are already defined here.
+
+---
+
+# 2. Non-Negotiable Technology Rules
+
+The application must be developed as a Java desktop application.
+
+The application frontend must use Java Swing.
+
+Application business logic must use Java.
+
+Supabase must be used for authentication, PostgreSQL database services, cloud storage, and Row Level Security.
+
+OCR must use Tesseract OCR through a Java-compatible integration such as Tess4J.
+
+Maven must be used for dependency management and project builds.
+
+The following technologies must NOT be introduced into the project unless explicitly approved later:
+
+* HTML
+* CSS
+* JavaScript
+* React
+* Angular
+* Vue
+* Python
+* Node.js
+* Spring Boot
+* PHP
+* Electron
+* separate web frontend
+* separate custom backend server
+
+The application must remain a Java desktop application.
+
+Modern visual styling may use Java Swing-compatible libraries such as FlatLaf. Charts may use JFreeChart. PDF generation may use OpenPDF.
+
+---
+
+# 3. Product Design Philosophy
+
+The application should look like a modern financial desktop application rather than a default Java Swing demo.
+
+The design should prioritize simplicity, readability, consistency, and usability. The application should use a clean layout with a persistent navigation area, modern cards, structured tables, clear buttons, meaningful icons, consistent spacing, and appropriate visual hierarchy.
+
+The application should not attempt to imitate every feature of large enterprise expense platforms. The interface should remain focused on personal expense tracking.
+
+The user should be able to understand the application without technical knowledge.
+
+Every important action should provide clear visual feedback.
+
+---
+
+# 4. Global UI Structure
+
+After authentication, the main application window should use a consistent layout.
+
+The recommended structure is:
+
+```text
++---------------------------------------------------------------+
+|                         TOP BAR                               |
+| Logo / Page Title                    User / Logout            |
++-------------------+-------------------------------------------+
+|                   |                                           |
+|   SIDEBAR         |                                           |
+|                   |              MAIN CONTENT                  |
+| Dashboard         |                                           |
+| Expenses          |                                           |
+| Reports           |                                           |
+|                   |                                           |
+|                   |                                           |
+|                   |                                           |
+|                   |                                           |
++-------------------+-------------------------------------------+
+```
+
+The sidebar should remain consistent across the main application screens.
+
+The top bar should provide the current page title and authenticated user information where appropriate.
+
+The main content area should change depending on the selected module.
+
+---
+
+# 5. Navigation
+
+The primary navigation should contain:
+
+```text
+Dashboard
+Expenses
+Reports
+Logout
+```
+
+Additional options such as Settings or Categories should only be introduced if they are required by the implementation.
+
+The selected navigation item should have a clear active state.
+
+Clicking Dashboard should open the dashboard.
+
+Clicking Expenses should open the expense management screen.
+
+Clicking Reports should open the report screen.
+
+Clicking Logout should ask for confirmation where appropriate and then terminate the authenticated session.
+
+The user should not need to restart the application to move between screens.
+
+---
+
+# 6. Login Screen
+
+The login screen should provide a clean authentication interface.
+
+Recommended structure:
+
+```text
++---------------------------------------------+
+|                                             |
+|             EXPENSE TRACKER                 |
+|                                             |
+|       Manage your expenses easily           |
+|                                             |
+|       Email                                 |
+|       [________________________]            |
+|                                             |
+|       Password                              |
+|       [________________________]            |
+|                                             |
+|       [        LOGIN        ]               |
+|                                             |
+|       Don't have an account? Sign Up        |
+|                                             |
++---------------------------------------------+
+```
+
+The login screen should provide clear validation.
+
+If credentials are invalid, the user should see an understandable error message.
+
+The password field must hide password characters.
+
+The application must not store passwords directly in the application database.
+
+Authentication must be performed through Supabase Auth.
+
+---
+
+# 7. Dashboard Screen
+
+The dashboard is the main landing screen after successful authentication.
+
+The dashboard should provide a quick understanding of the user's expenses without requiring the user to open the expense table.
+
+Recommended structure:
+
+```text
+Welcome back!
+
+[ Total Expenses ]   [ This Month ]   [ Expense Count ]   [ Highest Expense ]
+
+
++-------------------------------------+
+|       Expense Analytics             |
+|                                     |
+|          Category Chart             |
+|                                     |
++-------------------------------------+
+
+
++--------------------------------------------------+
+| Recent Expenses                                  |
+|                                                  |
+| Date | Merchant | Category | Amount | Receipt   |
+|--------------------------------------------------|
+| ...                                              |
++--------------------------------------------------+
+```
+
+The dashboard should display:
+
+* Total expense amount
+* Current month expense amount
+* Total number of expenses
+* Highest expense
+* Recent expenses
+* Category summary
+* Optional category chart
+
+Dashboard values must be calculated from the user's actual database records.
+
+The dashboard must not display hardcoded sample numbers after the application is connected to real data.
+
+---
+
+# 8. Dashboard Cards
+
+Dashboard summary cards should visually separate major metrics.
+
+Each card should contain:
+
+```text
+Metric title
+Large value
+Optional supporting information
+```
+
+For example:
+
+```text
+TOTAL EXPENSE
+
+₹24,500
+```
+
+Cards should use consistent dimensions, spacing, typography, and alignment.
+
+The cards should not contain unnecessary decoration.
+
+---
+
+# 9. Expense Management Screen
+
+The Expenses screen is the primary workspace for managing expenses.
+
+Recommended structure:
+
+```text
+Expenses
+
+[ Search expenses... ]
+
+[ Category ▼ ] [ Payment ▼ ] [ Receipt ▼ ]
+[ From Date ] [ To Date ]       [ Clear Filters ]
+
+
+[ + Add Expense ]
+
+
++------------------------------------------------------------------+
+| Date | Merchant | Category | Amount | Payment | Receipt | Action |
+|------------------------------------------------------------------|
+| ...                                                              |
+| ...                                                              |
+| ...                                                              |
++------------------------------------------------------------------+
+```
+
+The screen must support:
+
+* Add
+* Edit
+* Delete
+* View Receipt
+* Search
+* Filter
+* Sort
+* Refresh
+
+The table should remain readable when multiple expenses are present.
+
+---
+
+# 10. Expense Table
+
+The expense table should display:
+
+```text
+Date
+Merchant
+Category
+Amount
+Payment Method
+Receipt Status
+Actions
+```
+
+Actions should include:
+
+```text
+Edit
+Delete
+View Bill
+```
+
+The View Bill action should only be enabled or meaningful when a receipt exists.
+
+For an expense without a receipt, the table should clearly display:
+
+```text
+No Receipt
+```
+
+The table should not display a fake receipt.
+
+---
+
+# 11. Add Expense Screen
+
+The Add Expense interface is one of the most important screens in the application.
+
+Recommended structure:
+
+```text
+Add Expense
+
+Merchant / Expense Title
+[____________________________]
+
+Amount
+[____________________________]
+
+Expense Date
+[____________________________]
+
+Category
+[ Select Category ▼ ]
+
+Payment Method
+[ Select Payment Method ▼ ]
+
+Description
+[____________________________]
+[____________________________]
+
+Receipt
+[ Choose Receipt ]   [ Scan Receipt ]
+
+Receipt Status:
+No Receipt / Receipt Attached
+
+
+[ Cancel ]              [ Save Expense ]
+```
+
+The form must support two paths.
+
+### Path A — Manual Expense
+
+```text
+User enters information
+        ↓
+Selects category
+        ↓
+Selects payment method
+        ↓
+Optional receipt
+        ↓
+Save
+```
+
+### Path B — Receipt-Assisted Expense
+
+```text
+Choose receipt
+        ↓
+OCR processing
+        ↓
+Merchant / Amount / Date populated
+        ↓
+User verifies
+        ↓
+Select category
+        ↓
+Select payment method
+        ↓
+Save
+```
+
+---
+
+# 12. Receipt Upload UX
+
+The receipt upload process should clearly communicate what is happening.
+
+When the user chooses a receipt:
+
+```text
+Choose File
+      ↓
+Validate File
+      ↓
+Preview Receipt
+      ↓
+Optional OCR
+      ↓
+Upload to Storage
+```
+
+The application should not block the entire UI unnecessarily during file processing.
+
+A loading indicator should be displayed during long-running operations.
+
+For example:
+
+```text
+Processing receipt...
+
+[ Loading Indicator ]
+```
+
+After successful processing:
+
+```text
+Receipt processed successfully.
+Please verify the extracted information.
+```
+
+---
+
+# 13. OCR User Experience
+
+OCR must be treated as an assistant, not as an authority.
+
+The application must never assume that OCR output is always correct.
+
+The correct flow is:
+
+```text
+Receipt Image
+     ↓
+Tesseract OCR
+     ↓
+Raw Text
+     ↓
+Java Parsing
+     ↓
+Suggested Values
+     ↓
+User Verification
+     ↓
+Final Expense
+```
+
+The UI should visually communicate that extracted information is editable.
+
+For example:
+
+```text
+Merchant
+[ ABC Electricity Ltd. ]
+
+Amount
+[ ₹2450 ]
+
+Date
+[ 05/09/2026 ]
+
+        ↓
+
+Please verify extracted information.
+```
+
+The user must be able to modify every extracted field before saving.
+
+---
+
+# 14. OCR Fields
+
+OCR should attempt to extract only:
+
+```text
+Merchant
+Amount
+Date
+```
+
+OCR should NOT automatically determine:
+
+```text
+Category
+Payment Method
+```
+
+The user must select those values manually.
+
+Example:
+
+```text
+OCR:
+Merchant → ABC Electricity Ltd.
+Amount   → ₹2,450
+Date     → 05/09/2026
+
+User:
+Category → Utilities
+Payment  → UPI
+```
+
+---
+
+# 15. OCR Failure Behavior
+
+OCR failure must never cause the expense workflow to fail completely.
+
+If OCR cannot read the receipt:
+
+```text
+Unable to extract information from this receipt.
+
+You can enter the expense details manually.
+```
+
+The application should keep the selected receipt available where possible.
+
+The user should then be able to enter:
+
+```text
+Merchant
+Amount
+Date
+Category
+Payment Method
+Description
+```
+
+manually.
+
+---
+
+# 16. No Receipt Workflow
+
+Receipt upload is optional.
+
+When the user has no receipt:
+
+```text
+Merchant
+Amount
+Date
+Category
+Payment Method
+Description
+
+Receipt:
+No Receipt
+```
+
+The expense should still be saved normally.
+
+Database representation should use something similar to:
+
+```text
+receipt_status = NO_RECEIPT
+receipt_path = null
+```
+
+The application must not create a fake image or fake bill.
+
+---
+
+# 17. Edit Expense UX
+
+When the user clicks Edit, the existing expense should open in an editable form.
+
+The form should contain the same information as Add Expense.
+
+Existing values should already be populated.
+
+The user should be able to modify:
+
+* Merchant
+* Amount
+* Date
+* Category
+* Payment Method
+* Description
+* Receipt
+
+After saving:
+
+```text
+Expense updated successfully.
+```
+
+The expense list should refresh to show the updated data.
+
+---
+
+# 18. Delete Expense UX
+
+Delete is a destructive action and therefore requires confirmation.
+
+Recommended dialog:
+
+```text
+Delete Expense?
+
+Are you sure you want to delete this expense?
+
+[ Cancel ]        [ Delete ]
+```
+
+The expense must only be deleted after user confirmation.
+
+After successful deletion:
+
+```text
+Expense deleted successfully.
+```
+
+If deletion fails, the application should keep the record visible and show an error.
+
+---
+
+# 19. Receipt Viewer
+
+When the user clicks View Bill, a dedicated dialog should display the stored receipt image.
+
+Recommended structure:
+
+```text
++---------------------------------------+
+|              Receipt                  |
+|                                       |
+|       [ Receipt Image ]               |
+|                                       |
+|                                       |
+|              [ Close ]                |
++---------------------------------------+
+```
+
+The image should be scaled appropriately to fit the viewing area while preserving its aspect ratio.
+
+The viewer should not permanently modify the stored image.
+
+If the receipt cannot be loaded, the application should display an appropriate error message.
+
+---
+
+# 20. Search UX
+
+The search field should be easy to locate.
+
+Example:
+
+```text
+[ 🔍 Search merchant or description... ]
+```
+
+Search should support partial matches.
+
+For example:
+
+```text
+Search:
+amazon
+```
+
+should find:
+
+```text
+Amazon
+Amazon Fresh
+Amazon Web Services
+```
+
+where those values exist.
+
+Search should be case-insensitive.
+
+---
+
+# 21. Filter UX
+
+Filters should be placed near the search field.
+
+Recommended filters:
+
+```text
+Category
+Payment Method
+Receipt Status
+From Date
+To Date
+```
+
+A Clear Filters button should reset all filters.
+
+The user should be able to combine filters.
+
+Example:
+
+```text
+Category = Food
+Payment = UPI
+Date = September 2026
+```
+
+The table should display only matching records.
+
+---
+
+# 22. Reports Screen
+
+The Reports screen should allow the user to generate reports based on selected criteria.
+
+Recommended interface:
+
+```text
+Expense Reports
+
+From Date
+[____________]
+
+To Date
+[____________]
+
+Category
+[ All Categories ▼ ]
+
+
+[ Generate Report ]
+
+
++------------------------------------------------+
+| Report Summary                                 |
+|                                                |
+| Total Expenses: ₹24,500                        |
+| Number of Expenses: 18                         |
+|                                                |
++------------------------------------------------+
+
++------------------------------------------------+
+| Expense Details                                |
+|                                                |
+| Date | Merchant | Category | Amount | Payment  |
+|                                                |
++------------------------------------------------+
+
+[ Export PDF ]   [ Export CSV ]   [ Print ]
+```
+
+The report should only include expenses accessible to the authenticated user.
+
+---
+
+# 23. Report Calculation
+
+When the user generates a report, the system should calculate:
+
+```text
+Total expense amount
+Number of expenses
+Category totals
+Expense records
+```
+
+The report should respect the selected date range.
+
+If a category is selected, only that category should be included.
+
+The report must not contain expenses outside the selected criteria.
+
+---
+
+# 24. Visual Design System
+
+The application should use a consistent visual design system.
+
+The design system should define:
+
+* Primary font
+* Heading sizes
+* Body text size
+* Button style
+* Input style
+* Card style
+* Table style
+* Border radius
+* Spacing
+* Icon usage
+* Error states
+* Success states
+* Warning states
+
+The exact colors may be selected during UI implementation, but they must remain consistent throughout the application.
+
+The application should preferably use a modern Swing Look and Feel such as FlatLaf rather than default Swing styling.
+
+---
+
+# 25. Color and Visual Hierarchy
+
+The UI should have a professional financial-application appearance.
+
+Recommended hierarchy:
+
+```text
+Page title
+    ↓
+Section title
+    ↓
+Primary information
+    ↓
+Secondary information
+    ↓
+Supporting actions
+```
+
+Primary actions such as:
+
+```text
+Add Expense
+Save Expense
+Generate Report
+```
+
+should be visually prominent.
+
+Destructive actions such as Delete should be visually distinguishable from normal actions.
+
+The design should not use excessive colors.
+
+---
+
+# 26. Typography
+
+Typography should be consistent throughout the application.
+
+Recommended hierarchy:
+
+```text
+Application title
+    24–30px equivalent
+
+Page title
+    20–24px equivalent
+
+Section title
+    16–20px equivalent
+
+Normal text
+    13–15px equivalent
+
+Table text
+    12–14px equivalent
+```
+
+The exact font sizes may be adjusted according to the selected Swing Look and Feel and screen resolution.
+
+Text must remain readable.
+
+---
+
+# 27. Icons
+
+Icons should be used where they improve recognition.
+
+Recommended icon meanings:
+
+```text
+Dashboard → Home
+Expenses → Wallet / List
+Reports → Chart
+Add → Plus
+Edit → Pencil
+Delete → Trash
+View Bill → Eye
+Search → Magnifying Glass
+Filter → Filter
+Logout → Exit
+```
+
+Icons should not replace important text labels when their meaning may be unclear.
+
+---
+
+# 28. Animation Requirements
+
+The application may use lightweight animations to improve perceived quality.
+
+Possible animations include:
+
+* Sidebar transitions
+* Button hover effects
+* Card appearance
+* Loading indicators
+* OCR progress indication
+* Smooth dialog appearance
+* Dashboard number transitions
+
+Animations must remain lightweight and must not delay user actions unnecessarily.
+
+Animation should never be required to understand the application.
+
+The application must remain fully functional even if animations are disabled.
+
+Animations should be implemented using Java/Swing-compatible mechanisms such as `javax.swing.Timer`, transitions, listeners, or custom painting.
+
+No JavaScript or CSS animation should be introduced.
+
+---
+
+# 29. Loading States
+
+Long-running operations must provide visual feedback.
+
+Loading states are required for:
+
+```text
+Login request
+Expense loading
+Receipt upload
+OCR processing
+Report generation
+PDF generation
+CSV generation
+```
+
+Example:
+
+```text
+Processing...
+
+[ Loading indicator ]
+```
+
+Buttons related to the current operation may be temporarily disabled to prevent duplicate requests.
+
+---
+
+# 30. Empty States
+
+The application should provide meaningful empty states.
+
+If there are no expenses:
+
+```text
+No expenses found.
+
+Start tracking your expenses by adding your first expense.
+
+[ + Add Expense ]
+```
+
+If a search returns no result:
+
+```text
+No expenses match your search.
+```
+
+If a report contains no expenses:
+
+```text
+No expenses found for the selected criteria.
+```
+
+Empty states should not appear as blank screens.
+
+---
+
+# 31. Success Messages
+
+Successful operations should provide clear feedback.
+
+Examples:
+
+```text
+Expense added successfully.
+
+Expense updated successfully.
+
+Expense deleted successfully.
+
+Receipt uploaded successfully.
+
+Report generated successfully.
+```
+
+Success feedback may be shown using dialogs, status messages, or lightweight notifications depending on the selected UI design.
+
+---
+
+# 32. Error Messages
+
+Error messages should be understandable to normal users.
+
+Avoid displaying raw Java stack traces to users.
+
+Instead of:
+
+```text
+NullPointerException at ExpenseService.java:87
+```
+
+display:
+
+```text
+Unable to save the expense.
+
+Please check your internet connection and try again.
+```
+
+Technical details may be written to logs for debugging.
+
+---
+
+# 33. Java Application Architecture
+
+The application must follow a layered architecture.
+
+```text
++-----------------------------+
+|         Swing UI            |
++-----------------------------+
+              ↓
++-----------------------------+
+|       Service Layer         |
++-----------------------------+
+              ↓
++-----------------------------+
+|      Repository Layer       |
++-----------------------------+
+              ↓
++-----------------------------+
+|     Supabase Integration    |
++-----------------------------+
+              ↓
++-----------------------------+
+| PostgreSQL / Storage / Auth |
++-----------------------------+
+```
+
+Each layer must have a clear responsibility.
+
+---
+
+# 34. UI Layer
+
+The UI layer contains Java Swing components.
+
+Responsibilities include:
+
+* Displaying screens
+* Reading user input
+* Triggering application actions
+* Displaying validation errors
+* Displaying success messages
+* Updating tables
+* Showing loading states
+
+The UI layer must not directly contain complex database logic.
+
+For example, a Swing button handler should not directly construct raw database requests.
+
+Instead:
+
+```text
+Button
+  ↓
+ExpenseService
+  ↓
+ExpenseRepository
+  ↓
+Supabase
+```
+
+---
+
+# 35. Service Layer
+
+The service layer contains application-level business logic.
+
+Recommended services:
+
+```text
+AuthService
+ExpenseService
+OCRService
+ReportService
+StorageService
+```
+
+Responsibilities:
+
+### AuthService
+
+```text
+signup()
+login()
+logout()
+getCurrentUser()
+```
+
+### ExpenseService
+
+```text
+createExpense()
+getExpenses()
+updateExpense()
+deleteExpense()
+searchExpenses()
+filterExpenses()
+```
+
+### OCRService
+
+```text
+processReceipt()
+extractMerchant()
+extractAmount()
+extractDate()
+```
+
+### StorageService
+
+```text
+uploadReceipt()
+getReceipt()
+deleteReceipt()
+```
+
+### ReportService
+
+```text
+generateReport()
+calculateTotals()
+exportPDF()
+exportCSV()
+printReport()
+```
+
+---
+
+# 36. Repository Layer
+
+Repositories are responsible for data access.
+
+Example:
+
+```text
+ExpenseRepository
+
+create()
+findById()
+findByUser()
+update()
+delete()
+```
+
+The repository should hide Supabase implementation details from the service layer.
+
+The service should not need to know how the HTTP request is constructed.
+
+---
+
+# 37. Supabase Integration Layer
+
+The application should contain dedicated classes for communicating with Supabase.
+
+Suggested structure:
+
+```text
+supabase/
+    SupabaseClient.java
+    AuthAPI.java
+    DatabaseAPI.java
+    StorageAPI.java
+```
+
+These classes should centralize communication logic.
+
+The rest of the application should not duplicate Supabase request code.
+
+---
+
+# 38. OCR Architecture
+
+OCR must remain isolated inside the OCR service.
+
+Recommended flow:
+
+```text
+User selects receipt
+        ↓
+OCRService
+        ↓
+Image preprocessing
+        ↓
+Tess4J
+        ↓
+Tesseract
+        ↓
+Raw text
+        ↓
+Java parsing
+        ↓
+OCRResult
+        ↓
+Swing form
+```
+
+A dedicated result model may be used:
+
+```text
+OCRResult
+
+merchant
+amount
+date
+rawText
+confidence if available
+```
+
+The OCR service should not directly save expenses.
+
+It should return extracted information to the application.
+
+---
+
+# 39. Expense Model
+
+The Expense model should represent the application's expense data.
+
+Recommended properties:
+
+```text
+id
+userId
+categoryId
+merchant
+amount
+expenseDate
+paymentMethod
+description
+receiptPath
+receiptStatus
+createdAt
+updatedAt
+```
+
+The model should not contain unnecessary UI-specific logic.
+
+---
+
+# 40. Category Model
+
+The Category model should contain:
+
+```text
+id
+name
+```
+
+Categories should be stored in Supabase PostgreSQL.
+
+Suggested initial categories:
+
+```text
+Food
+Transportation
+Shopping
+Utilities
+Education
+Healthcare
+Entertainment
+Bills
+Subscription
+Other
+```
+
+---
+
+# 41. Receipt Status
+
+Receipt status should be represented consistently.
+
+Recommended values:
+
+```text
+AVAILABLE
+NO_RECEIPT
+```
+
+Additional states may be introduced if required:
+
+```text
+UPLOAD_FAILED
+```
+
+but unnecessary complexity should be avoided.
+
+---
+
+# 42. Database Relationship
+
+The basic database relationship should be:
+
+```text
+USER
+ |
+ | 1
+ |
+ | N
+EXPENSE
+ |
+ | N
+ |
+ | 1
+CATEGORY
+```
+
+Each expense belongs to one authenticated user.
+
+Each expense should reference one category.
+
+---
+
+# 43. Receipt Storage Architecture
+
+Receipt images must not be stored as binary data inside the expense database table.
+
+The recommended architecture is:
+
+```text
+Local Receipt Image
+       ↓
+Java StorageService
+       ↓
+Supabase Storage
+       ↓
+Receipt Path
+       ↓
+Expense Database Record
+```
+
+The database should store the receipt path/reference.
+
+Example:
+
+```text
+expense-receipts/
+    user-id/
+        expense-id.jpg
+```
+
+---
+
+# 44. Security Architecture
+
+Security must be enforced at the Supabase level as well as within the application.
+
+Each expense must have a `user_id`.
+
+Supabase Row Level Security must ensure:
+
+```text
+Authenticated User
+       ↓
+Can access only own expenses
+```
+
+The application must never rely only on hidden UI controls for security.
+
+A user must not be able to access another user's data by manipulating requests.
+
+The Supabase service-role key must never be embedded in the desktop application.
+
+---
+
+# 45. Threading Requirements
+
+Swing's Event Dispatch Thread must remain responsive.
+
+Long-running operations should not execute directly on the UI thread.
+
+Examples include:
+
+```text
+OCR
+Network requests
+Receipt upload
+Expense synchronization
+PDF generation
+Large report generation
+```
+
+Appropriate Java concurrency mechanisms should be used.
+
+The UI should display a loading state while these operations are running.
+
+---
+
+# 46. Validation Rules
+
+The following validations are required.
+
+### Merchant
+
+Must not be empty.
+
+### Amount
+
+Must:
+
+* be numeric
+* be greater than zero
+* use appropriate decimal precision
+
+### Date
+
+Must be a valid date.
+
+### Category
+
+Must be selected.
+
+### Payment Method
+
+Must be selected.
+
+### Receipt
+
+Optional.
+
+If provided:
+
+* file must exist
+* supported image format
+* reasonable file size
+
+---
+
+# 47. Payment Method Values
+
+The initial payment method list should contain:
+
+```text
+Cash
+UPI
+Debit Card
+Credit Card
+Bank Transfer
+Other
+```
+
+The list may be represented as an enum in Java and/or a controlled value set in the database.
+
+The user must select the payment method manually.
+
+---
+
+# 48. Search and Filtering Architecture
+
+Search and filtering should not be implemented by creating separate unrelated systems.
+
+The expense screen should have a unified filtering mechanism.
+
+Conceptually:
+
+```text
+All Expenses
+      ↓
+Search
+      ↓
+Category Filter
+      ↓
+Payment Filter
+      ↓
+Receipt Filter
+      ↓
+Date Range
+      ↓
+Sorted Result
+```
+
+The implementation may optimize the actual database queries where appropriate.
+
+---
+
+# 49. Reporting Architecture
+
+The report system should separate data calculation from presentation.
+
+Recommended flow:
+
+```text
+Report Filters
+      ↓
+ReportService
+      ↓
+Expense Data
+      ↓
+Report Model
+      ↓
+Report UI
+      ↓
+PDF / CSV / Print
+```
+
+The report calculation should not depend on the visual Swing components.
+
+---
+
+# 50. PDF Architecture
+
+PDF generation should be isolated in a utility or reporting component.
+
+Example:
+
+```text
+ReportService
+      ↓
+PDFUtil
+      ↓
+OpenPDF
+      ↓
+PDF File
+```
+
+The PDF should contain:
+
+```text
+Report Title
+Date Range
+Total Expenses
+Expense Count
+Category Summary
+Expense Table
+```
+
+---
+
+# 51. CSV Architecture
+
+CSV generation should be separated from the UI.
+
+Example:
+
+```text
+ReportService
+      ↓
+CSV Exporter
+      ↓
+CSV File
+```
+
+CSV columns should include:
+
+```text
+Date
+Merchant
+Category
+Amount
+Payment Method
+Description
+Receipt Status
+```
+
+---
+
+# 52. File Handling Requirements
+
+Local files should be handled using Java APIs.
+
+The application should use `JFileChooser` or an equivalent Swing-compatible mechanism for receipt selection.
+
+The application should validate the file before processing.
+
+Temporary files should be cleaned up where appropriate.
+
+Receipt paths should never be hardcoded.
+
+---
+
+# 53. Configuration
+
+Application configuration should be separated from business logic.
+
+Configuration may contain:
+
+```text
+Supabase URL
+Supabase public/client key
+Storage bucket name
+Application settings
+```
+
+Sensitive credentials must not be committed to public source control.
+
+The application must not contain privileged server-side secrets.
+
+---
+
+# 54. Dependency Management
+
+The project should use Maven.
+
+Potential dependencies include:
+
+```text
+FlatLaf
+Tess4J
+OpenPDF
+JFreeChart
+JSON / HTTP libraries where required
+```
+
+Dependencies should only be introduced when they solve an actual requirement.
+
+The agent must not add unnecessary libraries simply to implement basic Java functionality.
+
+---
+
+# 55. Recommended Project Structure
+
+```text
+ExpenseTracker/
+│
+├── pom.xml
+│
+├── docs/
+│   ├── 01_PRD.md
+│   └── 02_UI_UX_AND_TECHNICAL_SPECIFICATION.md
+│
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/
+│   │   │       └── expensetracker/
+│   │   │
+│   │   │           ├── Main.java
+│   │   │           │
+│   │   │           ├── model/
+│   │   │           │
+│   │   │           ├── ui/
+│   │   │           │
+│   │   │           ├── service/
+│   │   │           │
+│   │   │           ├── repository/
+│   │   │           │
+│   │   │           ├── supabase/
+│   │   │           │
+│   │   │           ├── ocr/
+│   │   │           │
+│   │   │           └── util/
+│   │   │
+│   │   └── resources/
+│   │
+│   └── test/
+│
+└── README.md
+```
+
+The package structure may be adjusted if there is a strong technical reason, but separation of responsibilities must remain.
+
+---
+
+# 56. Coding Rules for AI Agents
+
+The AI agent must follow these rules.
+
+### Rule 1
+
+Read the PRD and this specification before modifying the project.
+
+### Rule 2
+
+Do not invent major requirements.
+
+### Rule 3
+
+Do not change the technology stack without explicit approval.
+
+### Rule 4
+
+Do not introduce web technologies.
+
+### Rule 5
+
+Do not put database logic directly inside Swing UI classes.
+
+### Rule 6
+
+Do not put large amounts of business logic inside button listeners.
+
+### Rule 7
+
+Do not duplicate Supabase communication logic.
+
+### Rule 8
+
+Reuse existing classes before creating new ones.
+
+### Rule 9
+
+Do not rewrite working functionality without a reason.
+
+### Rule 10
+
+Keep methods focused on one responsibility.
+
+### Rule 11
+
+Use meaningful names.
+
+### Rule 12
+
+Handle errors explicitly.
+
+### Rule 13
+
+Never expose sensitive credentials.
+
+### Rule 14
+
+Do not mark a feature complete until its acceptance criteria have been verified.
+
+---
+
+# 57. AI Agent UI Rules
+
+The AI agent must not create a generic default Swing interface.
+
+The UI must:
+
+* Use a consistent layout.
+* Use modern Swing styling.
+* Use consistent spacing.
+* Use readable typography.
+* Use clear hierarchy.
+* Use meaningful icons where appropriate.
+* Provide loading states.
+* Provide empty states.
+* Provide success states.
+* Provide error states.
+* Keep primary actions visually obvious.
+* Avoid excessive visual effects.
+* Keep tables readable.
+* Avoid overcrowding.
+* Maintain consistent component sizes.
+* Preserve the same design language across all screens.
+
+The UI should feel like one application rather than a collection of unrelated screens.
+
+---
+
+# 58. AI Agent Development Process
+
+The agent should work incrementally.
+
+The agent must first inspect the existing project.
+
+It must identify:
+
+```text
+Current architecture
+Existing classes
+Existing functionality
+Compilation status
+Missing functionality
+```
+
+The agent should then implement one logical feature at a time.
+
+Recommended order:
+
+```text
+1. Project Setup
+2. Supabase Configuration
+3. Authentication
+4. Database Models
+5. Expense CRUD
+6. Receipt Upload
+7. Receipt Viewer
+8. OCR
+9. Search and Filters
+10. Dashboard Analytics
+11. Reports
+12. PDF Export
+13. CSV Export
+14. Printing
+15. UI Polish
+16. Testing
+```
+
+After each major feature, the agent should compile the application and fix errors before proceeding.
+
+---
+
+# 59. Agent Verification Loop
+
+Every implementation cycle should follow:
+
+```text
+READ
+ ↓
+PLAN
+ ↓
+IMPLEMENT
+ ↓
+COMPILE
+ ↓
+TEST
+ ↓
+FIX
+ ↓
+VERIFY
+ ↓
+UPDATE STATUS
+```
+
+The agent should not continuously generate new code without checking whether the existing application still works.
+
+---
+
+# 60. Definition of a Good UI
+
+The UI will be considered successful when a user can open the application and immediately understand:
+
+```text
+Where am I?
+What can I do?
+How do I add an expense?
+Where are my expenses?
+How do I view a receipt?
+How do I generate a report?
+```
+
+The interface should minimize unnecessary clicks.
+
+The most common action, adding an expense, should be easy to find from both the dashboard and expenses screen.
+
+---
+
+# 61. Final Architecture Summary
+
+The final architecture should conceptually be:
+
+```text
+                    USER
+                     │
+                     ▼
+              JAVA SWING UI
+                     │
+          ┌──────────┼──────────┐
+          ▼          ▼          ▼
+      Services      OCR       Reports
+          │          │          │
+          ▼          ▼          ▼
+     Repository   Tess4J     PDF/CSV
+          │          │
+          ▼          ▼
+       Supabase   Tesseract
+          │
+    ┌─────┼──────────────┐
+    ▼     ▼              ▼
+   Auth PostgreSQL     Storage
+    │     │              │
+    └─────┴──────────────┘
+```
+
+The application-side implementation remains Java.
+
+Supabase provides managed backend services.
+
+OCR is performed through Java integration with Tesseract.
+
+The Swing UI communicates with Java services rather than directly communicating with the database.
+
+---
+
+# 62. Final Implementation Principle
+
+The most important principle for the project is:
+
+**Build a simple, reliable, maintainable expense tracker first and then improve its visual quality.**
+
+The application must prioritize correct expense data, secure user isolation, reliable CRUD operations, optional receipt handling, useful OCR, accurate calculations, and dependable reporting.
+
+Visual polish should enhance the product rather than introduce unnecessary complexity.
+
+The AI agent must always prefer a clean and maintainable Java implementation over a complicated implementation that merely produces more visual effects or more code.

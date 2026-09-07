@@ -1,0 +1,376 @@
+# Expense Tracker System
+
+## Product Requirements Document (PRD)
+
+**Version:** 1.0
+**Project Type:** Desktop Application
+**Application Technology:** Java Swing
+**Backend Services:** Supabase
+**Database:** Supabase PostgreSQL
+**Authentication:** Supabase Auth
+**Storage:** Supabase Storage
+**OCR:** Tesseract OCR through Tess4J
+**Build Tool:** Maven
+
+---
+
+## 1. Product Overview
+
+Expense Tracker System is a Java-based desktop application designed to help users record, organize, search, analyze, and report their personal expenses from a single application. The system will provide a simple and practical alternative to maintaining expenses manually in notebooks or spreadsheets. The application will allow a user to add an expense either manually or by uploading a bill or receipt image. When a receipt is available, the application will use OCR technology to extract useful information such as merchant name, amount, and date from the uploaded image. The extracted information will be displayed to the user for verification and correction before the expense is saved. Category and payment method will always be selected manually by the user because these values depend on the user's own classification and cannot be reliably determined from OCR. Receipt upload will remain optional because some expenses, especially cash expenses, may not have a physical receipt. The application will also provide expense management, search and filtering, dashboard analytics, bill viewing, report generation, PDF and CSV export, and printing functionality.
+
+---
+
+## 2. Problem Statement
+
+People frequently make expenses through different payment methods such as cash, UPI, debit cards, credit cards, and bank transfers, but they may not have a convenient way to maintain a structured record of those expenses. Manually entering every detail can be time-consuming, especially when a bill or receipt contains information that could otherwise be extracted automatically. At the same time, not every expense has a receipt, so an expense tracking system should not force users to upload a bill for every transaction. The Expense Tracker System addresses this problem by providing a centralized desktop application where users can record expenses manually, optionally upload receipts, automatically extract basic information through OCR when a receipt is available, organize expenses into categories, search historical transactions, view analytics, and generate useful reports.
+
+---
+
+## 3. Product Goal
+
+The primary goal of the system is to create a reliable, easy-to-use, medium-level expense management desktop application that reduces the effort required to maintain personal expense records. The application should combine manual expense entry with optional OCR-assisted receipt processing while keeping the user in control of the final expense information. The system should provide enough functionality for a user to understand where their money is being spent, review previous expenses, find specific transactions quickly, and generate reports for a selected period. The application should remain focused on personal expense tracking rather than attempting to become a full enterprise expense management platform.
+
+---
+
+## 4. Target User
+
+The primary target user is an individual who wants to maintain and analyze personal expenses using a desktop application. The user may record expenses for food, transportation, shopping, utilities, education, entertainment, healthcare, bills, subscriptions, and other personal categories. The application is designed primarily for a single authenticated user account in its first version. Complex organizational roles such as administrator, manager, finance officer, auditor, employee approval workflows, corporate cards, reimbursement approval, and multi-level expense authorization are outside the scope of this version.
+
+---
+
+## 5. Product Scope
+
+The first version of the Expense Tracker System will include authentication, dashboard analytics, expense creation, expense viewing, expense editing, expense deletion, optional receipt upload, receipt viewing, OCR-assisted receipt data extraction, manual category selection, manual payment method selection, search, filtering, sorting, date-based reporting, category-based reporting, PDF export, CSV export, and printing. The application will use Supabase for authentication, database storage, file storage, and row-level security. The application-side programming will be performed in Java, with Java Swing responsible for the graphical user interface and Java service and repository classes responsible for application logic and communication with Supabase.
+
+The system will not include enterprise-level approval workflows, multiple user roles, accounting integrations, corporate card management, travel booking, automatic reimbursement processing, payroll functionality, or complex financial accounting. These features may be considered future enhancements but will not be part of the initial implementation.
+
+---
+
+## 6. User Journey
+
+The main user journey begins when the user launches the application and reaches the authentication screen. The user can create an account or log into an existing account through Supabase Authentication. After successful authentication, the user is taken to the dashboard where they can view a summary of their expenses. From the dashboard, the user can navigate to the expense management section and create a new expense. During expense creation, the user can either enter the expense information manually or optionally select a bill or receipt image from the computer. If a receipt is selected, the application sends the image to the OCR processing component, which extracts the merchant name, amount, and date. The extracted values are then populated into the expense form, where the user can review and correct them. The user manually selects the expense category and payment method, adds an optional description, and saves the expense. If the user does not have a receipt, they can skip receipt upload and enter the expense manually. After saving, the expense becomes available in the expense list, where it can be searched, filtered, edited, deleted, or have its receipt viewed. The user can also generate reports based on selected dates and categories and export those reports to PDF or CSV. When finished, the user can log out.
+
+---
+
+## 7. Authentication Requirements
+
+The application shall provide user registration and login functionality through Supabase Auth. The application shall not store user passwords directly in the application's PostgreSQL tables. Password management and authentication shall be handled by Supabase Auth. After successful login, the application shall maintain the authenticated session required for authorized operations. The application shall provide a logout function that terminates the active session. Invalid credentials, registration failures, expired sessions, and authentication-related errors shall be presented through clear user-friendly messages.
+
+---
+
+## 8. Dashboard Requirements
+
+The dashboard shall provide a summarized view of the user's financial activity. It shall display the total amount of recorded expenses, the current month's expense amount, the number of recorded expenses, and the highest expense where sufficient data is available. The dashboard shall also display a list of recent expenses so that the user can quickly review recent activity. The application may provide a category-based visual summary using charts. The dashboard should be designed as a modern desktop interface rather than relying on the default plain Swing appearance. Cards, panels, icons, spacing, typography, hover effects, and charts may be used to improve usability while keeping the implementation within Java Swing.
+
+---
+
+## 9. Add Expense Requirements
+
+The Add Expense module shall allow the user to create a new expense. The expense form shall contain merchant or expense title, amount, expense date, category, payment method, description, and optional receipt information. The amount must be a valid positive numeric value. The date must be valid and should not be accepted if it cannot be interpreted as a valid date. Category and payment method shall be selected manually by the user. The description field shall be optional. The receipt shall also be optional. The user shall be able to save an expense without uploading any receipt.
+
+When a receipt is available, the user shall have an option to choose the receipt image from the local computer. The application shall validate the selected file before attempting to process or upload it. Supported image formats may include JPG, JPEG, and PNG. The system should reject unsupported file types and excessively large files with an understandable error message.
+
+---
+
+## 10. Receipt and Bill Management
+
+Receipt management shall be optional for every expense. If a receipt exists, the user shall be able to upload it and associate it with the corresponding expense. The receipt image shall be stored in Supabase Storage rather than directly inside the PostgreSQL expense table. The database shall store a secure path or reference to the stored receipt. The application shall allow the user to view the receipt associated with an expense. The user may replace or remove the receipt where required by the implementation.
+
+If an expense has no receipt, the system shall still allow the expense to be saved. Such an expense shall have a receipt status such as `NO_RECEIPT`, while expenses with an uploaded receipt shall have a status such as `AVAILABLE`. The application shall not generate a fake receipt or placeholder bill for expenses without receipts. A receipt is evidence attached to an expense, not a mandatory requirement for creating an expense.
+
+---
+
+## 11. OCR Requirements
+
+The OCR feature shall provide an optional assisted data-entry mechanism for expenses that have a receipt or bill. The application shall use Tesseract OCR through the Tess4J Java integration. The OCR process shall begin after the user selects a valid receipt image. The application may perform basic image preprocessing such as resizing, grayscale conversion, or contrast improvement when required to improve recognition quality. The OCR engine shall produce raw text from the image, after which Java-based parsing logic shall attempt to identify the merchant name, amount, and date.
+
+The amount extraction logic shall prioritize values associated with terms such as GRAND TOTAL, TOTAL AMOUNT, AMOUNT DUE, NET PAYABLE, PAYABLE, and TOTAL rather than blindly selecting the first numeric value found in the OCR output. Date extraction shall prioritize values located near labels such as BILL DATE, INVOICE DATE, ISSUE DATE, TRANSACTION DATE, and DATE. Merchant extraction may use meaningful lines near the beginning of the receipt, but because receipts have different formats, merchant extraction shall be treated as an estimate. The user must always be able to modify OCR-generated information before saving.
+
+The OCR system shall not automatically decide the user's expense category or payment method. Category and payment method shall remain manual user selections. OCR failure shall not prevent expense creation. If OCR cannot reliably extract the required information, the application shall notify the user and provide a manual-entry option.
+
+---
+
+## 12. Expense Data Requirements
+
+Each expense shall contain a unique identifier and shall be associated with the authenticated user. The expense shall contain merchant or title information, amount, expense date, category, payment method, optional description, optional receipt path, receipt status, creation timestamp, and update timestamp. The category should preferably be represented using a category identifier linked to a categories table. The amount shall use a suitable decimal database type rather than floating-point storage to avoid financial precision problems.
+
+The initial database design shall remain simple and shall primarily contain users, categories, and expenses, with Supabase Auth maintaining authentication information. The system may use a profile or user table for application-specific user information where necessary.
+
+---
+
+## 13. Expense Viewing Requirements
+
+The Expenses screen shall display the user's recorded expenses in a structured table. The table should display important information such as date, merchant or title, category, amount, payment method, and receipt status. Each expense should provide actions for editing, deleting, and viewing the associated receipt when available. The list should support refresh functionality so that changes made to expenses are reflected in the interface.
+
+The application shall only display expenses belonging to the currently authenticated user. The user must not be able to access another user's expenses through the application or by manipulating requests.
+
+---
+
+## 14. Edit Expense Requirements
+
+The user shall be able to edit an existing expense. When the user selects an expense for editing, the application shall load the current expense information into an editable form. The user shall be able to modify merchant, amount, date, category, payment method, description, and receipt information where applicable. After successful validation, the changes shall be saved to Supabase and the updated information shall be reflected in the application.
+
+The system shall not unnecessarily recreate an expense during editing. The existing expense identifier shall remain unchanged unless there is a specific technical reason otherwise.
+
+---
+
+## 15. Delete Expense Requirements
+
+The user shall be able to delete an expense from the expense list. Because deletion is a destructive action, the application shall display a confirmation dialog before permanently deleting the expense. If the expense has an associated receipt, the system should also handle the associated storage object appropriately so that unnecessary files are not left behind. If deletion fails, the original expense should remain visible and the user should receive an appropriate error message.
+
+---
+
+## 16. Search Requirements
+
+The application shall provide a search function within the expense list. The user shall be able to search expenses using relevant text fields such as merchant or expense title and, where practical, description. Search should be case-insensitive and should provide useful results even when the user enters only part of a merchant name. Search should be combined with other filters so that the user can narrow down large sets of expenses efficiently.
+
+---
+
+## 17. Filtering and Sorting Requirements
+
+The expense list shall support filtering by category, payment method, receipt status, and date range. The user shall be able to select a start date and end date to display expenses from a specific period. The application should support sorting by expense date, amount, merchant, or category. The default sorting should preferably display the newest expenses first.
+
+The search and filter controls should be simple enough that a normal user can understand them without technical knowledge. Clearing filters should return the user to the complete list of their accessible expenses.
+
+---
+
+## 18. Category Requirements
+
+The application shall provide a predefined set of common expense categories such as Food, Transportation, Shopping, Utilities, Education, Healthcare, Entertainment, Bills, Subscription, and Other. Categories shall be stored in the database so that expenses can reference them consistently. The initial version does not require a complex category-management system, although a category management feature may be added in the future.
+
+The user shall manually select a category when creating or editing an expense. OCR shall not automatically assign categories.
+
+---
+
+## 19. Payment Method Requirements
+
+The application shall provide a predefined selection of payment methods. Examples may include Cash, UPI, Debit Card, Credit Card, Bank Transfer, and Other. The user shall manually select the payment method while creating or editing an expense. The system shall not attempt to infer the payment method from OCR because receipt formats are inconsistent and automatic classification may be incorrect.
+
+---
+
+## 20. Reports
+
+The Report module shall allow the user to generate a report for a selected date range. The user shall be able to specify a start date and end date and may optionally filter the report by category. The generated report shall contain the matching expenses and useful summary information such as total expenses, number of expenses, and category-wise totals. The report should be readable and suitable for personal record keeping.
+
+The application shall provide options to export the generated report as a PDF and CSV file. The application shall also provide a print option where supported by the Java desktop environment.
+
+---
+
+## 21. PDF Export
+
+The system shall provide PDF report generation using a Java-compatible PDF library such as OpenPDF. The generated PDF should include the report title, selected date range, generation information, expense records, and relevant totals. The PDF should be readable and professionally formatted. PDF generation errors shall be handled gracefully without causing the application to crash.
+
+---
+
+## 22. CSV Export
+
+The system shall provide CSV export using Java file and text-processing capabilities. The CSV file should contain structured expense information including date, merchant, category, amount, payment method, description, and receipt status where applicable. The exported file should be usable in spreadsheet applications.
+
+---
+
+## 23. Printing
+
+The application shall provide a print option for generated reports using Java's desktop printing capabilities. Printing should be initiated by the user and should not happen automatically. If the printer is unavailable or the printing operation fails, the application shall display an appropriate message.
+
+---
+
+## 24. Supabase Requirements
+
+Supabase shall provide the managed backend infrastructure for authentication, PostgreSQL database storage, Storage, and Row Level Security. The Java application shall communicate with Supabase through appropriate APIs using Java networking capabilities or a suitable Java-compatible Supabase integration. The application does not require a separate Python, Node.js, or Spring Boot backend server.
+
+Supabase Row Level Security shall ensure that authenticated users can only access expenses belonging to their own user identity. Database operations such as creating, reading, updating, and deleting expenses shall respect these security policies. Receipt files stored in Supabase Storage shall also follow appropriate user-level access rules.
+
+The application must never embed a Supabase service-role or equivalent privileged secret key in the desktop application. Public/client-side credentials may be used where appropriate, while authorization and data isolation must be enforced through Supabase Auth and RLS.
+
+---
+
+## 25. Technical Architecture
+
+The application shall follow a layered Java architecture. The Swing user interface shall be responsible for displaying information and collecting user actions. The service layer shall contain application and business logic. The repository layer shall handle database operations. Supabase integration classes shall manage communication with Supabase services.
+
+The general architecture shall follow:
+
+```text
+Java Swing UI
+      ↓
+Service Layer
+      ↓
+Repository Layer
+      ↓
+Supabase API
+      ↓
+PostgreSQL / Storage
+```
+
+For OCR, the architecture shall follow:
+
+```text
+Swing File Selection
+      ↓
+OCRService
+      ↓
+Tess4J
+      ↓
+Tesseract
+      ↓
+Raw OCR Text
+      ↓
+Java Parsing Logic
+      ↓
+Merchant / Amount / Date
+      ↓
+User Verification
+      ↓
+Expense Save
+```
+
+The UI shall not directly perform database operations. Business logic shall not be unnecessarily placed inside Swing event handlers. The application shall use clear classes and responsibilities so that individual modules can be tested and maintained independently.
+
+---
+
+## 26. Proposed Java Project Structure
+
+The initial Java project should follow a structure similar to the following:
+
+```text
+ExpenseTracker/
+│
+├── pom.xml
+│
+├── src/main/java/com/expensetracker/
+│   │
+│   ├── Main.java
+│   │
+│   ├── model/
+│   │   ├── User.java
+│   │   ├── Expense.java
+│   │   └── Category.java
+│   │
+│   ├── ui/
+│   │   ├── LoginFrame.java
+│   │   ├── DashboardFrame.java
+│   │   ├── ExpenseFrame.java
+│   │   ├── AddExpenseDialog.java
+│   │   ├── EditExpenseDialog.java
+│   │   ├── BillViewerDialog.java
+│   │   └── ReportFrame.java
+│   │
+│   ├── service/
+│   │   ├── AuthService.java
+│   │   ├── ExpenseService.java
+│   │   ├── OCRService.java
+│   │   ├── ReportService.java
+│   │   └── StorageService.java
+│   │
+│   ├── repository/
+│   │   ├── ExpenseRepository.java
+│   │   └── CategoryRepository.java
+│   │
+│   ├── supabase/
+│   │   ├── SupabaseClient.java
+│   │   ├── AuthAPI.java
+│   │   ├── DatabaseAPI.java
+│   │   └── StorageAPI.java
+│   │
+│   └── util/
+│       ├── ValidationUtil.java
+│       ├── DateUtil.java
+│       ├── FileUtil.java
+│       └── PDFUtil.java
+│
+└── src/test/
+```
+
+The exact class structure may be refined during implementation, but the application should preserve separation between presentation, business logic, data access, and external-service integration.
+
+---
+
+## 27. User Interface Requirements
+
+The application shall have a modern, clean, and consistent desktop interface. Although the application uses Java Swing rather than HTML, CSS, or React, the interface should not rely on the default outdated Swing appearance. Modern Swing styling, custom panels, typography, icons, spacing, rounded components, hover states, visual feedback, and optional animations may be implemented using Java-compatible UI techniques and libraries such as FlatLaf.
+
+The interface should prioritize usability over excessive visual effects. Animations should be lightweight and should never interfere with data entry or application performance. Loading indicators should be shown during longer operations such as OCR processing, receipt uploads, report generation, and network requests.
+
+---
+
+## 28. Validation Requirements
+
+The system shall validate user input before saving data. Merchant or title should not be empty when an expense is created. Amount must be positive and numerically valid. Date must be valid. Category and payment method must be selected. Receipt files must have supported formats and reasonable file sizes. Text fields should be protected against invalid or unexpectedly large input where appropriate.
+
+Validation errors should be displayed close to the relevant field or through clear dialogs. The application should not silently reject invalid information.
+
+---
+
+## 29. Error Handling Requirements
+
+The application shall handle errors without unexpectedly terminating. Network failures, Supabase authentication errors, database errors, receipt upload failures, OCR failures, invalid files, PDF generation errors, CSV export errors, and printing failures shall be handled using appropriate exception handling and user-friendly messages.
+
+If OCR fails, the user should be allowed to continue by entering the information manually. If receipt upload fails, the application should inform the user and should not silently pretend that the receipt was uploaded. If a receipt is optional and upload fails, the user may continue without a receipt where appropriate. Database failures should not cause unsaved data to be falsely presented as successfully stored.
+
+---
+
+## 30. Security Requirements
+
+Authentication shall be handled through Supabase Auth. Passwords shall not be stored in plain text by the application. Every expense must be associated with a user identifier. Supabase RLS policies must prevent one authenticated user from reading, modifying, or deleting another user's expenses. Receipt storage should follow the same user isolation principle.
+
+The application shall not contain privileged Supabase credentials. Sensitive configuration should not be committed to public source control. The application should validate file types and sizes before uploading receipts. User-provided data should be handled safely when constructing API requests and database operations.
+
+---
+
+## 31. Performance Requirements
+
+Normal navigation between application screens should feel responsive. Basic expense operations should complete without unnecessary delays under normal network conditions. OCR processing may take longer depending on image quality and computer performance, so the application should display a loading state during OCR operations. Network-dependent operations should avoid freezing the main Swing UI thread. Long-running tasks such as OCR, uploads, downloads, and report generation should use appropriate background execution mechanisms.
+
+---
+
+## 32. Data Integrity Requirements
+
+The system shall preserve the accuracy of stored expense information. Monetary values shall use decimal-based database storage. Expense records shall have unique identifiers. Category references should remain valid. Updates should modify the intended expense only. Delete operations should require user confirmation. Receipt references should not point to nonexistent files unless the application explicitly handles the missing-file state.
+
+---
+
+## 33. Accessibility and Usability
+
+The interface should use readable font sizes, clear labels, sufficient visual contrast, understandable button names, and predictable navigation. Important actions should not rely only on color. Error messages should clearly explain what went wrong and, where possible, how the user can correct it. The application should minimize unnecessary steps when recording an expense.
+
+---
+
+## 34. Logging and Debugging
+
+The application should use structured application logging where useful for development and troubleshooting. Logs may record technical events such as authentication failures, API errors, OCR failures, upload failures, and unexpected exceptions. Sensitive information such as passwords, authentication secrets, service-role keys, or private tokens must never be written to logs.
+
+---
+
+## 35. Testing Requirements
+
+The project shall include testing for core business functionality and important failure scenarios. Authentication should be tested for successful and unsuccessful login and registration. Expense management should be tested for creation, retrieval, editing, and deletion. Receipt handling should be tested for successful upload, viewing, missing receipt, unsupported file type, and upload failure. OCR should be tested using representative receipt images and should verify extraction of merchant, amount, and date where recognizable.
+
+Search, filtering, dashboard calculations, report generation, PDF export, CSV export, and validation should also be tested. The final project should not be considered complete merely because it compiles; the defined functional acceptance criteria must pass.
+
+---
+
+## 36. Acceptance Criteria
+
+The Expense Tracker System shall be considered functionally complete when an authenticated user can successfully create an account or log in, access the dashboard, create an expense manually, optionally upload a receipt, process a receipt using OCR, review and correct OCR results, manually select category and payment method, save the expense, view saved expenses, edit existing expenses, delete expenses with confirmation, view uploaded receipts, and create expenses without receipts.
+
+The system must also allow users to search and filter expenses, display correct dashboard totals, generate date-range reports, optionally filter reports by category, export reports to PDF and CSV, and print reports. Supabase RLS must prevent cross-user access. OCR failure must not prevent manual expense entry. The application must handle normal network, file, and processing errors without crashing.
+
+---
+
+## 37. Definition of Done
+
+A feature shall only be considered complete when its Java implementation has been integrated into the application, the relevant UI is functional, required Supabase operations work correctly, validation has been implemented, expected error cases have been handled, and relevant tests or acceptance checks pass. Code should follow the project's defined architecture and naming standards. Working functionality should not be unnecessarily rewritten when implementing subsequent features.
+
+The complete project shall be considered finished only when the major functional requirements described in this document have been implemented and verified.
+
+---
+
+## 38. Future Scope
+
+Future versions may introduce multiple users with organizational roles, shared expense groups, recurring expenses, budget management, spending alerts, advanced analytics, category customization, automatic recurring expense detection, improved OCR models, duplicate expense detection, cloud synchronization across multiple desktop devices, email reports, accounting integrations, reimbursement workflows, and mobile applications. These features are intentionally excluded from version 1.0 to keep the project medium-sized and achievable.
+
+---
+
+## 39. Final Product Definition
+
+The final product will be a Java Swing desktop Expense Tracker connected to Supabase services. Java will control the application's user interface, business logic, validation, OCR integration, file processing, reporting, and application behavior. Supabase will provide authentication, PostgreSQL database services, cloud storage, and row-level security. Tesseract OCR accessed through Tess4J will provide receipt text recognition, while Java parsing logic will convert recognized text into suggested merchant, amount, and date values. The user will remain responsible for verifying OCR results and selecting the expense category and payment method. Receipts will remain optional, allowing the system to support both receipt-based and cash/no-receipt expenses. The final application should provide a clean, modern, reliable, and maintainable desktop experience without requiring HTML, CSS, JavaScript, React, Python, or a separate custom backend server.

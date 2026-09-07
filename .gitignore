@@ -5,6 +5,7 @@ dist
 tmp
 out-tsc
 *.tsbuildinfo
+expense-tracker-desktop/target/
 .expo
 .expo-shared
 
