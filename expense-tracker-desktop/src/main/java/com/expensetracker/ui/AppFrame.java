@@ -10,9 +10,11 @@ import com.expensetracker.repository.CategoryRepository;
 import com.expensetracker.repository.SupabaseCategoryRepository;
 import com.expensetracker.repository.SupabaseExpenseRepository;
 import com.expensetracker.service.AuthService;
+import com.expensetracker.service.DefaultReportService;
 import com.expensetracker.service.ExpenseService;
 import com.expensetracker.service.OcrService;
 import com.expensetracker.service.ReceiptFileValidator;
+import com.expensetracker.service.ReportService;
 import com.expensetracker.service.ServiceException;
 import com.expensetracker.service.StorageService;
 import com.expensetracker.service.SupabaseExpenseService;
@@ -58,6 +60,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -75,6 +78,7 @@ public final class AppFrame extends JFrame {
     private final User user;
     private final AuthService authService;
     private final ExpenseService expenseService;
+    private final ReportService reportService = new DefaultReportService();
     private final CategoryRepository categoryRepository;
     private final StorageService storageService;
     private final OcrService ocrService;
@@ -281,12 +285,16 @@ public final class AppFrame extends JFrame {
         intro.setFont(intro.getFont().deriveFont(Font.BOLD, 26f));
         intro.setForeground(new Color(15, 23, 42));
 
+        MetricCard totalCard = new MetricCard("Total expenses", "All recorded expenses");
+        MetricCard monthCard = new MetricCard("This month", "Current calendar month");
+        MetricCard countCard = new MetricCard("Expense count", "Transactions recorded");
+        MetricCard highestCard = new MetricCard("Highest expense", "Largest single record");
         JPanel metrics = new JPanel(new GridLayout(1, 4, 16, 0));
         metrics.setOpaque(false);
-        metrics.add(new MetricCard("Total expenses", "All recorded expenses"));
-        metrics.add(new MetricCard("This month", "Current calendar month"));
-        metrics.add(new MetricCard("Expense count", "Transactions recorded"));
-        metrics.add(new MetricCard("Highest expense", "Largest single record"));
+        metrics.add(totalCard);
+        metrics.add(monthCard);
+        metrics.add(countCard);
+        metrics.add(highestCard);
 
         JPanel header = new JPanel(new BorderLayout(0, 18));
         header.setOpaque(false);
@@ -296,16 +304,59 @@ public final class AppFrame extends JFrame {
 
         JPanel recent = new JPanel(new BorderLayout(0, 12));
         recent.setOpaque(false);
+        JPanel recentHeader = new JPanel(new BorderLayout(12, 0));
+        recentHeader.setOpaque(false);
         JLabel recentTitle = new JLabel("Recent expenses");
         recentTitle.setFont(recentTitle.getFont().deriveFont(Font.BOLD, 18f));
         recentTitle.setForeground(new Color(15, 23, 42));
-        recent.add(recentTitle, BorderLayout.NORTH);
-        JTable table = new JTable(new Object[][]{}, new String[]{"Date", "Merchant", "Category", "Amount", "Receipt"});
+        JLabel dashboardStatus = new JLabel("Loading expenses...");
+        dashboardStatus.setForeground(new Color(100, 116, 139));
+        recentHeader.add(recentTitle, BorderLayout.WEST);
+        recentHeader.add(dashboardStatus, BorderLayout.EAST);
+        recent.add(recentHeader, BorderLayout.NORTH);
+        DashboardTableModel tableModel = new DashboardTableModel();
+        JTable table = new JTable(tableModel);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setFillsViewportHeight(true);
+        table.setRowHeight(30);
         recent.add(new JScrollPane(table), BorderLayout.CENTER);
         dashboard.add(recent, BorderLayout.CENTER);
         replaceContent(dashboard);
+
+        new SwingWorker<DashboardPageData, Void>() {
+            @Override
+            protected DashboardPageData doInBackground() {
+                return new DashboardPageData(
+                        categoryRepository.findAll(),
+                        expenseService.getExpenses(user.id())
+                );
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    DashboardPageData data = get();
+                    categories = data.categories();
+                    ReportService.DashboardSummary summary =
+                            reportService.generateDashboard(data.expenses(), LocalDate.now());
+                    totalCard.setValue(formatAmount(summary.total()));
+                    monthCard.setValue(formatAmount(summary.currentMonthTotal()));
+                    countCard.setValue(Integer.toString(summary.count()));
+                    highestCard.setValue(summary.highestExpense() == null
+                            ? "—"
+                            : formatAmount(summary.highestExpense().amount()));
+                    tableModel.setData(summary.recentExpenses(), data.categories());
+                    dashboardStatus.setText(summary.count() == 0
+                            ? "No expenses recorded yet."
+                            : summary.count() + " "
+                                    + (summary.count() == 1 ? "expense" : "expenses") + " loaded");
+                } catch (Exception exception) {
+                    Throwable cause = exception instanceof java.util.concurrent.ExecutionException
+                            && exception.getCause() != null ? exception.getCause() : exception;
+                    dashboardStatus.setText(readableError(cause, "Unable to load dashboard data."));
+                }
+            }
+        }.execute();
     }
 
     private void showExpenses() {
@@ -1270,6 +1321,16 @@ public final class AppFrame extends JFrame {
         return value == null ? "" : value;
     }
 
+    private String formatAmount(BigDecimal amount) {
+        return amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
+    }
+
+    private String readableError(Throwable cause, String fallback) {
+        return cause instanceof ServiceException && cause.getMessage() != null
+                ? cause.getMessage()
+                : fallback;
+    }
+
     private void replaceContent(JPanel panel) {
         contentPanel.removeAll();
         contentPanel.add(panel, BorderLayout.CENTER);
@@ -1278,6 +1339,9 @@ public final class AppFrame extends JFrame {
     }
 
     private record ExpensePageData(List<Category> categories, List<Expense> expenses) {
+    }
+
+    private record DashboardPageData(List<Category> categories, List<Expense> expenses) {
     }
 
     private record PaymentChoice(PaymentMethod method, String label) {
@@ -1381,6 +1445,49 @@ public final class AppFrame extends JFrame {
                 case 4 -> expense.paymentMethod().displayName();
                 case 5 -> expense.receiptStatus().displayName();
                 case 6 -> "Edit / Delete";
+                default -> "";
+            };
+        }
+    }
+
+    private final class DashboardTableModel extends AbstractTableModel {
+        private final String[] columns = {"Date", "Merchant", "Category", "Amount", "Receipt"};
+        private final Map<UUID, String> categoryNames = new HashMap<>();
+        private List<Expense> rows = List.of();
+
+        void setData(List<Expense> expenses, List<Category> categories) {
+            rows = new ArrayList<>(expenses);
+            categoryNames.clear();
+            for (Category category : categories) {
+                categoryNames.put(category.id(), category.name());
+            }
+            fireTableDataChanged();
+        }
+
+        @Override
+        public int getRowCount() {
+            return rows.size();
+        }
+
+        @Override
+        public int getColumnCount() {
+            return columns.length;
+        }
+
+        @Override
+        public String getColumnName(int column) {
+            return columns[column];
+        }
+
+        @Override
+        public Object getValueAt(int rowIndex, int columnIndex) {
+            Expense expense = rows.get(rowIndex);
+            return switch (columnIndex) {
+                case 0 -> expense.expenseDate();
+                case 1 -> expense.merchant();
+                case 2 -> categoryNames.getOrDefault(expense.categoryId(), "Unknown category");
+                case 3 -> formatAmount(expense.amount());
+                case 4 -> expense.receiptStatus().displayName();
                 default -> "";
             };
         }
