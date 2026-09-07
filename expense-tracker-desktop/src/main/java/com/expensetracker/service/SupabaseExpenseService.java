@@ -19,13 +19,17 @@ public final class SupabaseExpenseService implements ExpenseService {
     @Override
     public Expense createExpense(Expense expense) {
         requireOwned(expense);
-        return repository.create(expense);
+        Expense created = repository.create(expense);
+        requireOwned(created);
+        return created;
     }
 
     @Override
     public List<Expense> getExpenses(UUID userId) {
         requireCurrentUser(userId);
-        return repository.findByUser(currentUserId);
+        return repository.findByUser(currentUserId).stream()
+                .peek(this::requireOwned)
+                .toList();
     }
 
     @Override
@@ -34,7 +38,9 @@ public final class SupabaseExpenseService implements ExpenseService {
         if (expense.id() == null) {
             throw new ServiceException("Expense identifier is required.");
         }
-        return repository.update(expense);
+        Expense updated = repository.update(expense);
+        requireOwned(updated);
+        return updated;
     }
 
     @Override
@@ -42,8 +48,9 @@ public final class SupabaseExpenseService implements ExpenseService {
         if (expenseId == null) {
             throw new ServiceException("Expense identifier is required.");
         }
-        repository.findById(expenseId)
+        Expense expense = repository.findById(expenseId)
                 .orElseThrow(() -> new ServiceException("The expense was not found."));
+        requireOwned(expense);
         repository.delete(expenseId);
     }
 
@@ -51,7 +58,7 @@ public final class SupabaseExpenseService implements ExpenseService {
     public List<Expense> searchExpenses(UUID userId, String query) {
         requireCurrentUser(userId);
         String normalizedQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-        return repository.findByUser(currentUserId).stream()
+        return getExpenses(currentUserId).stream()
                 .filter(expense -> normalizedQuery.isBlank()
                         || expense.merchant().toLowerCase(Locale.ROOT).contains(normalizedQuery)
                         || (expense.description() != null

@@ -728,9 +728,11 @@ public final class AppFrame extends JFrame {
         setExpenseControlsEnabled(false);
         expenseStatus.setText("Deleting expense...");
         new SwingWorker<Void, Void>() {
+            private ExpenseDeleteWorkflow.DeleteResult deleteResult;
+
             @Override
             protected Void doInBackground() {
-                expenseService.deleteExpense(expense.id());
+                deleteResult = ExpenseDeleteWorkflow.delete(expenseService, allExpenses, expense.id());
                 return null;
             }
 
@@ -738,17 +740,28 @@ public final class AppFrame extends JFrame {
             protected void done() {
                 try {
                     get();
-                    refreshExpenses(true);
-                    JOptionPane.showMessageDialog(
-                            AppFrame.this,
-                            "Expense deleted successfully.",
-                            "Expense deleted",
-                            JOptionPane.INFORMATION_MESSAGE
-                    );
+                    if (deleteResult.deleted()) {
+                        refreshExpenses(true);
+                        JOptionPane.showMessageDialog(
+                                AppFrame.this,
+                                "Expense deleted successfully.",
+                                "Expense deleted",
+                                JOptionPane.INFORMATION_MESSAGE
+                        );
+                    } else {
+                        // Keep the failed row in the UI model and surface the service error.
+                        allExpenses = deleteResult.expenses();
+                        setExpenseControlsEnabled(true);
+                        applyFilters();
+                        showError(
+                                deleteResult.error(),
+                                "The expense could not be deleted. It is still visible."
+                        );
+                    }
                 } catch (Exception exception) {
                     Throwable cause = exception instanceof java.util.concurrent.ExecutionException
                             && exception.getCause() != null ? exception.getCause() : exception;
-                    // allExpenses and the table are intentionally untouched on failure.
+                    // Unexpected worker failures also leave allExpenses untouched.
                     setExpenseControlsEnabled(true);
                     applyFilters();
                     showError(cause, "The expense could not be deleted. It is still visible.");

@@ -72,7 +72,9 @@ public final class SupabaseExpenseRepository implements ExpenseRepository {
         if (!rows.isArray() || rows.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(fromJson(rows.get(0)));
+        Expense expense = fromJson(rows.get(0));
+        requireReturnedOwned(expense);
+        return Optional.of(expense);
     }
 
     @Override
@@ -93,7 +95,9 @@ public final class SupabaseExpenseRepository implements ExpenseRepository {
         }
         List<Expense> expenses = new ArrayList<>();
         for (JsonNode row : rows) {
-            expenses.add(fromJson(row));
+            Expense expense = fromJson(row);
+            requireReturnedOwned(expense);
+            expenses.add(expense);
         }
         return expenses;
     }
@@ -171,7 +175,9 @@ public final class SupabaseExpenseRepository implements ExpenseRepository {
         if (!rows.isArray() || rows.isEmpty()) {
             throw new ServiceException(fallback);
         }
-        return fromJson(rows.get(0));
+        Expense expense = fromJson(rows.get(0));
+        requireReturnedOwned(expense);
+        return expense;
     }
 
     private Expense fromJson(JsonNode node) {
@@ -275,6 +281,12 @@ public final class SupabaseExpenseRepository implements ExpenseRepository {
     private void requireOwned(Expense expense) {
         if (expense == null || !userId.equals(expense.userId())) {
             throw new ServiceException("You can only change your own expenses.");
+        }
+    }
+
+    private void requireReturnedOwned(Expense expense) {
+        if (expense == null || !userId.equals(expense.userId())) {
+            throw new ServiceException("Supabase returned an expense belonging to another user.");
         }
     }
 

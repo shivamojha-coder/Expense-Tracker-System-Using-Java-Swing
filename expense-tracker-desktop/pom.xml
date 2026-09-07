@@ -16,6 +16,7 @@
         <flatlaf.version>3.6.1</flatlaf.version>
         <jackson.version>2.17.3</jackson.version>
         <tess4j.version>5.13.0</tess4j.version>
+        <junit.version>5.11.4</junit.version>
     </properties>
 
     <dependencies>
@@ -33,6 +34,12 @@
             <groupId>net.sourceforge.tess4j</groupId>
             <artifactId>tess4j</artifactId>
             <version>${tess4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -53,6 +60,11 @@
                 <configuration>
                     <mainClass>com.expensetracker.Main</mainClass>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
             </plugin>
         </plugins>
     </build>
