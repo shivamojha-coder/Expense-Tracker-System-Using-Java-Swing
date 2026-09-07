@@ -901,9 +901,9 @@ public final class AppFrame extends JFrame {
             saveButton.setEnabled(false);
             cancelButton.setEnabled(false);
             saveButton.setText("Saving...");
-            new SwingWorker<ReceiptWorkflowResult, Void>() {
+            new SwingWorker<ReceiptWorkflow.Result, Void>() {
                 @Override
-                protected ReceiptWorkflowResult doInBackground() {
+                protected ReceiptWorkflow.Result doInBackground() {
                     Expense savedExpense = existing == null
                             ? expenseService.createExpense(formExpense)
                             : expenseService.updateExpense(formExpense);
@@ -913,7 +913,7 @@ public final class AppFrame extends JFrame {
                 @Override
                 protected void done() {
                     try {
-                        ReceiptWorkflowResult receiptResult = get();
+                        ReceiptWorkflow.Result receiptResult = get();
                         dialog.dispose();
                         refreshExpenses(false);
                         JOptionPane.showMessageDialog(
@@ -1113,92 +1113,18 @@ public final class AppFrame extends JFrame {
         }
     }
 
-    private ReceiptWorkflowResult finishReceiptWorkflow(
+    private ReceiptWorkflow.Result finishReceiptWorkflow(
             Expense savedExpense,
             Expense existing,
             ReceiptSelection selection
     ) {
-        String savedMessage = existing == null
-                ? "Expense added successfully."
-                : "Expense updated successfully.";
-        String existingPath = existing == null ? null : existing.receiptPath();
-
-        if (selection.localFile != null) {
-            String uploadedPath = null;
-            try {
-                uploadedPath = storageService.uploadReceipt(savedExpense.id(), selection.localFile);
-                Expense attached = withReceipt(savedExpense, uploadedPath, ReceiptStatus.AVAILABLE);
-                Expense persisted = expenseService.updateExpense(attached);
-                if (existingPath != null && !existingPath.equals(uploadedPath)) {
-                    try {
-                        storageService.deleteReceipt(existingPath);
-                    } catch (ServiceException ignored) {
-                        return new ReceiptWorkflowResult(
-                                persisted,
-                                savedMessage + " The new receipt is attached, but the old receipt could not be removed.",
-                                true
-                        );
-                    }
-                }
-                return new ReceiptWorkflowResult(persisted, savedMessage, false);
-            } catch (ServiceException exception) {
-                if (uploadedPath != null) {
-                    try {
-                        storageService.deleteReceipt(uploadedPath);
-                    } catch (ServiceException ignored) {
-                        // Do not hide the original failure from the user.
-                    }
-                }
-                if (existingPath == null) {
-                    try {
-                        expenseService.updateExpense(
-                                withReceipt(savedExpense, null, ReceiptStatus.UPLOAD_FAILED)
-                        );
-                    } catch (ServiceException ignored) {
-                        // The manual expense is still saved even if the status update fails.
-                    }
-                }
-                return new ReceiptWorkflowResult(
-                        savedExpense,
-                        savedMessage + " The receipt could not be uploaded: "
-                                + exception.getMessage()
-                                + " You can enter the details manually and try again.",
-                        true
-                );
-            }
-        }
-
-        if (selection.removeExisting && existingPath != null) {
-            try {
-                Expense withoutReceipt = withReceipt(savedExpense, null, ReceiptStatus.NO_RECEIPT);
-                Expense persisted = expenseService.updateExpense(withoutReceipt);
-                storageService.deleteReceipt(existingPath);
-                return new ReceiptWorkflowResult(persisted, savedMessage, false);
-            } catch (ServiceException exception) {
-                return new ReceiptWorkflowResult(
-                        savedExpense,
-                        savedMessage + " The receipt could not be removed: " + exception.getMessage(),
-                        true
-                );
-            }
-        }
-        return new ReceiptWorkflowResult(savedExpense, savedMessage, false);
-    }
-
-    private Expense withReceipt(Expense expense, String receiptPath, ReceiptStatus status) {
-        return new Expense(
-                expense.id(),
-                expense.userId(),
-                expense.categoryId(),
-                expense.merchant(),
-                expense.amount(),
-                expense.expenseDate(),
-                expense.paymentMethod(),
-                expense.description(),
-                receiptPath,
-                status,
-                expense.createdAt(),
-                Instant.now()
+        return ReceiptWorkflow.finish(
+                expenseService,
+                storageService,
+                savedExpense,
+                existing,
+                selection.localFile,
+                selection.removeExisting
         );
     }
 
@@ -1381,9 +1307,6 @@ public final class AppFrame extends JFrame {
             this.receiptPath = receiptPath;
             this.status = status == null ? ReceiptStatus.NO_RECEIPT : status;
         }
-    }
-
-    private record ReceiptWorkflowResult(Expense expense, String message, boolean warning) {
     }
 
     private static final class PlaceholderRenderer extends DefaultListCellRenderer {
