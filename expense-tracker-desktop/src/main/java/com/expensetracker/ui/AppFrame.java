@@ -11,8 +11,13 @@ import com.expensetracker.repository.SupabaseCategoryRepository;
 import com.expensetracker.repository.SupabaseExpenseRepository;
 import com.expensetracker.service.AuthService;
 import com.expensetracker.service.ExpenseService;
+import com.expensetracker.service.OcrService;
+import com.expensetracker.service.ReceiptFileValidator;
 import com.expensetracker.service.ServiceException;
+import com.expensetracker.service.StorageService;
 import com.expensetracker.service.SupabaseExpenseService;
+import com.expensetracker.service.SupabaseStorageService;
+import com.expensetracker.service.Tess4JOcrService;
 import com.expensetracker.supabase.SupabaseClient;
 import com.expensetracker.ui.components.MetricCard;
 
@@ -21,6 +26,7 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -29,6 +35,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.ImageIcon;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingWorker;
 import javax.swing.event.DocumentEvent;
@@ -46,7 +54,11 @@ import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -56,6 +68,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import javax.imageio.ImageIO;
 
 public final class AppFrame extends JFrame {
     private final AppConfig config;
@@ -63,6 +76,8 @@ public final class AppFrame extends JFrame {
     private final AuthService authService;
     private final ExpenseService expenseService;
     private final CategoryRepository categoryRepository;
+    private final StorageService storageService;
+    private final OcrService ocrService;
     private final JPanel contentPanel = new JPanel(new BorderLayout());
     private final JLabel pageTitle = new JLabel("Dashboard");
 
@@ -91,7 +106,9 @@ public final class AppFrame extends JFrame {
                 user,
                 authService,
                 buildExpenseService(config, user, authService),
-                buildCategoryRepository(config, authService)
+                buildCategoryRepository(config, authService),
+                buildStorageService(config, user, authService),
+                new Tess4JOcrService(config.maxReceiptSizeBytes())
         );
     }
 
@@ -101,7 +118,31 @@ public final class AppFrame extends JFrame {
             ExpenseService expenseService,
             CategoryRepository categoryRepository
     ) {
-        this(AppConfig.fromEnvironment(), user, authService, expenseService, categoryRepository);
+        this(
+                AppConfig.fromEnvironment(),
+                user,
+                authService,
+                expenseService,
+                categoryRepository
+        );
+    }
+
+    public AppFrame(
+            AppConfig config,
+            User user,
+            AuthService authService,
+            ExpenseService expenseService,
+            CategoryRepository categoryRepository
+    ) {
+        this(
+                config,
+                user,
+                authService,
+                expenseService,
+                categoryRepository,
+                buildStorageService(config, user, authService),
+                new Tess4JOcrService(config.maxReceiptSizeBytes())
+        );
     }
 
     private AppFrame(
@@ -109,7 +150,9 @@ public final class AppFrame extends JFrame {
             User user,
             AuthService authService,
             ExpenseService expenseService,
-            CategoryRepository categoryRepository
+            CategoryRepository categoryRepository,
+            StorageService storageService,
+            OcrService ocrService
     ) {
         super("Expense Tracker");
         this.config = config;
@@ -117,6 +160,8 @@ public final class AppFrame extends JFrame {
         this.authService = authService;
         this.expenseService = expenseService;
         this.categoryRepository = categoryRepository;
+        this.storageService = storageService;
+        this.ocrService = ocrService;
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(1180, 760));
         setSize(1280, 820);
@@ -138,6 +183,20 @@ public final class AppFrame extends JFrame {
 
     private static CategoryRepository buildCategoryRepository(AppConfig config, AuthService authService) {
         return new SupabaseCategoryRepository(new SupabaseClient(config), authService::getAccessToken);
+    }
+
+    private static StorageService buildStorageService(
+            AppConfig config,
+            User user,
+            AuthService authService
+    ) {
+        return new SupabaseStorageService(
+                new SupabaseClient(config),
+                authService::getAccessToken,
+                config.storageBucket(),
+                user.id(),
+                config.maxReceiptSizeBytes()
+        );
     }
 
     private void buildUi() {
@@ -654,7 +713,7 @@ public final class AppFrame extends JFrame {
                 Dialog.ModalityType.APPLICATION_MODAL
         );
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.setSize(520, 570);
+        dialog.setSize(600, 700);
         dialog.setLocationRelativeTo(this);
 
         JPanel form = new JPanel(new GridBagLayout());
@@ -683,6 +742,17 @@ public final class AppFrame extends JFrame {
         JTextArea descriptionArea = new JTextArea(existing == null ? "" : safe(existing.description()), 4, 20);
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
+        ReceiptSelection receiptSelection = new ReceiptSelection(
+                existing == null ? null : existing.receiptPath(),
+                existing == null ? ReceiptStatus.NO_RECEIPT : existing.receiptStatus()
+        );
+        JLabel receiptLabel = new JLabel();
+        JButton attachReceiptButton = new JButton("Attach receipt");
+        JButton viewReceiptButton = new JButton("View");
+        JButton removeReceiptButton = new JButton("Remove");
+        JLabel ocrStatusLabel = new JLabel("OCR will suggest merchant, amount, and date only.");
+        ocrStatusLabel.setForeground(new Color(100, 116, 139));
+        updateReceiptControls(receiptSelection, receiptLabel, viewReceiptButton, removeReceiptButton);
 
         if (existing != null) {
             selectCategory(categoryBox, existing.categoryId());
@@ -696,20 +766,52 @@ public final class AppFrame extends JFrame {
         addFormField(form, constraints, 8, "Payment method", paymentBox);
         addFormField(form, constraints, 10, "Description", new JScrollPane(descriptionArea));
 
-        JLabel receiptHint = new JLabel(
-                existing == null
-                        ? "Receipt attachment will be available in the receipt workflow."
-                        : "Receipt status: " + existing.receiptStatus().displayName()
-        );
-        receiptHint.setForeground(new Color(100, 116, 139));
+        JPanel receiptPanel = new JPanel(new BorderLayout(8, 6));
+        receiptPanel.setOpaque(false);
+        JPanel receiptActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        receiptActions.setOpaque(false);
+        receiptActions.add(attachReceiptButton);
+        receiptActions.add(viewReceiptButton);
+        receiptActions.add(removeReceiptButton);
+        receiptPanel.add(receiptLabel, BorderLayout.NORTH);
+        receiptPanel.add(receiptActions, BorderLayout.CENTER);
+        receiptPanel.add(ocrStatusLabel, BorderLayout.SOUTH);
         constraints.gridy = 12;
         constraints.insets = new Insets(10, 0, 10, 0);
-        form.add(receiptHint, constraints);
+        form.add(receiptPanel, constraints);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 10));
         JButton cancelButton = new JButton("Cancel");
         JButton saveButton = primaryButton(existing == null ? "Save expense" : "Save changes");
         cancelButton.addActionListener(event -> dialog.dispose());
+        attachReceiptButton.addActionListener(event -> chooseReceipt(
+                dialog,
+                receiptSelection,
+                receiptLabel,
+                viewReceiptButton,
+                removeReceiptButton,
+                ocrStatusLabel,
+                merchantField,
+                amountField,
+                dateField,
+                attachReceiptButton
+        ));
+        viewReceiptButton.addActionListener(event -> viewReceipt(receiptSelection.receiptPath));
+        removeReceiptButton.addActionListener(event -> {
+            if (receiptSelection.localFile != null || receiptSelection.receiptPath != null) {
+                receiptSelection.localFile = null;
+                receiptSelection.removeExisting = receiptSelection.receiptPath != null;
+                receiptSelection.receiptPath = null;
+                receiptSelection.status = ReceiptStatus.NO_RECEIPT;
+                updateReceiptControls(
+                        receiptSelection,
+                        receiptLabel,
+                        viewReceiptButton,
+                        removeReceiptButton
+                );
+                ocrStatusLabel.setText("Receipt will be removed when you save.");
+            }
+        });
         saveButton.addActionListener(event -> {
             Expense formExpense;
             try {
@@ -735,27 +837,28 @@ public final class AppFrame extends JFrame {
             saveButton.setEnabled(false);
             cancelButton.setEnabled(false);
             saveButton.setText("Saving...");
-            new SwingWorker<Expense, Void>() {
+            new SwingWorker<ReceiptWorkflowResult, Void>() {
                 @Override
-                protected Expense doInBackground() {
-                    return existing == null
+                protected ReceiptWorkflowResult doInBackground() {
+                    Expense savedExpense = existing == null
                             ? expenseService.createExpense(formExpense)
                             : expenseService.updateExpense(formExpense);
+                    return finishReceiptWorkflow(savedExpense, existing, receiptSelection);
                 }
 
                 @Override
                 protected void done() {
                     try {
-                        get();
+                        ReceiptWorkflowResult receiptResult = get();
                         dialog.dispose();
                         refreshExpenses(false);
                         JOptionPane.showMessageDialog(
                                 AppFrame.this,
-                                existing == null
-                                        ? "Expense added successfully."
-                                        : "Expense updated successfully.",
-                                "Expense saved",
-                                JOptionPane.INFORMATION_MESSAGE
+                                receiptResult.message(),
+                                receiptResult.warning() ? "Expense saved with a receipt warning" : "Expense saved",
+                                receiptResult.warning()
+                                        ? JOptionPane.WARNING_MESSAGE
+                                        : JOptionPane.INFORMATION_MESSAGE
                         );
                     } catch (Exception exception) {
                         Throwable cause = exception instanceof java.util.concurrent.ExecutionException
@@ -774,6 +877,265 @@ public final class AppFrame extends JFrame {
         dialog.add(form, BorderLayout.CENTER);
         dialog.add(actions, BorderLayout.SOUTH);
         dialog.setVisible(true);
+    }
+
+    private void chooseReceipt(
+            JDialog dialog,
+            ReceiptSelection selection,
+            JLabel receiptLabel,
+            JButton viewButton,
+            JButton removeButton,
+            JLabel ocrStatusLabel,
+            JTextField merchantField,
+            JTextField amountField,
+            JTextField dateField,
+            JButton attachButton
+    ) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Choose a receipt image");
+        chooser.setFileFilter(new FileNameExtensionFilter(
+                "Receipt images (JPG, JPEG, PNG)",
+                "jpg",
+                "jpeg",
+                "png"
+        ));
+        if (chooser.showOpenDialog(dialog) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        Path file = chooser.getSelectedFile().toPath();
+        try {
+            ReceiptFileValidator.validate(file, config.maxReceiptSizeBytes());
+        } catch (ServiceException exception) {
+            JOptionPane.showMessageDialog(
+                    dialog,
+                    exception.getMessage(),
+                    "Receipt not attached",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        selection.localFile = file;
+        selection.removeExisting = false;
+        updateReceiptControls(selection, receiptLabel, viewButton, removeButton);
+        ocrStatusLabel.setText("Reading receipt for editable suggestions...");
+        attachButton.setEnabled(false);
+        new SwingWorker<com.expensetracker.model.OcrResult, Void>() {
+            @Override
+            protected com.expensetracker.model.OcrResult doInBackground() {
+                return ocrService.processReceipt(file);
+            }
+
+            @Override
+            protected void done() {
+                attachButton.setEnabled(true);
+                try {
+                    com.expensetracker.model.OcrResult result = get();
+                    int suggestions = 0;
+                    if (result.merchant() != null && !result.merchant().isBlank()) {
+                        merchantField.setText(result.merchant());
+                        suggestions++;
+                    }
+                    if (result.amount() != null && result.amount().signum() > 0) {
+                        amountField.setText(result.amount().toPlainString());
+                        suggestions++;
+                    }
+                    if (result.expenseDate() != null) {
+                        dateField.setText(result.expenseDate().toString());
+                        suggestions++;
+                    }
+                    ocrStatusLabel.setText(suggestions == 0
+                            ? "OCR found no suggestions. Enter the details manually."
+                            : "OCR suggested " + suggestions
+                            + " field" + (suggestions == 1 ? "" : "s")
+                            + ". Review before saving.");
+                } catch (Exception exception) {
+                    Throwable cause = exception instanceof java.util.concurrent.ExecutionException
+                            && exception.getCause() != null ? exception.getCause() : exception;
+                    ocrStatusLabel.setText("OCR failed. You can enter the details manually.");
+                    JOptionPane.showMessageDialog(
+                            dialog,
+                            cause.getMessage() == null
+                                    ? "OCR failed. You can enter the receipt details manually."
+                                    : cause.getMessage(),
+                            "Receipt attached without OCR",
+                            JOptionPane.WARNING_MESSAGE
+                    );
+                }
+            }
+        }.execute();
+    }
+
+    private void updateReceiptControls(
+            ReceiptSelection selection,
+            JLabel receiptLabel,
+            JButton viewButton,
+            JButton removeButton
+    ) {
+        if (selection.localFile != null) {
+            receiptLabel.setText("Selected: " + selection.localFile.getFileName()
+                    + " (upload on save)");
+            viewButton.setVisible(false);
+            removeButton.setVisible(true);
+        } else if (selection.receiptPath != null && !selection.receiptPath.isBlank()) {
+            receiptLabel.setText("Receipt status: " + selection.status.displayName());
+            viewButton.setVisible(true);
+            removeButton.setVisible(true);
+        } else {
+            receiptLabel.setText("No receipt attached.");
+            viewButton.setVisible(false);
+            removeButton.setVisible(false);
+        }
+        receiptLabel.setForeground(new Color(100, 116, 139));
+    }
+
+    private void viewReceipt(String receiptPath) {
+        if (receiptPath == null || receiptPath.isBlank()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Attach and save a receipt before viewing it.",
+                    "No receipt",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+            return;
+        }
+        new SwingWorker<byte[], Void>() {
+            @Override
+            protected byte[] doInBackground() {
+                return storageService.downloadReceipt(receiptPath);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    showReceiptPreview(get());
+                } catch (Exception exception) {
+                    Throwable cause = exception instanceof java.util.concurrent.ExecutionException
+                            && exception.getCause() != null ? exception.getCause() : exception;
+                    showError(cause, "The receipt preview could not be loaded.");
+                }
+            }
+        }.execute();
+    }
+
+    private void showReceiptPreview(byte[] bytes) {
+        try {
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
+            if (image == null) {
+                throw new ServiceException("The stored receipt is not a readable image.");
+            }
+            int maxWidth = 760;
+            int maxHeight = 560;
+            double scale = Math.min(
+                    1d,
+                    Math.min((double) maxWidth / image.getWidth(), (double) maxHeight / image.getHeight())
+            );
+            ImageIcon icon = new ImageIcon(image.getScaledInstance(
+                    (int) Math.max(1, image.getWidth() * scale),
+                    (int) Math.max(1, image.getHeight() * scale),
+                    java.awt.Image.SCALE_SMOOTH
+            ));
+            JLabel imageLabel = new JLabel(icon);
+            imageLabel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+            JOptionPane.showMessageDialog(
+                    this,
+                    imageLabel,
+                    "Receipt preview",
+                    JOptionPane.PLAIN_MESSAGE
+            );
+        } catch (IOException exception) {
+            showError(exception, "The receipt preview could not be displayed.");
+        }
+    }
+
+    private ReceiptWorkflowResult finishReceiptWorkflow(
+            Expense savedExpense,
+            Expense existing,
+            ReceiptSelection selection
+    ) {
+        String savedMessage = existing == null
+                ? "Expense added successfully."
+                : "Expense updated successfully.";
+        String existingPath = existing == null ? null : existing.receiptPath();
+
+        if (selection.localFile != null) {
+            String uploadedPath = null;
+            try {
+                uploadedPath = storageService.uploadReceipt(savedExpense.id(), selection.localFile);
+                Expense attached = withReceipt(savedExpense, uploadedPath, ReceiptStatus.AVAILABLE);
+                Expense persisted = expenseService.updateExpense(attached);
+                if (existingPath != null && !existingPath.equals(uploadedPath)) {
+                    try {
+                        storageService.deleteReceipt(existingPath);
+                    } catch (ServiceException ignored) {
+                        return new ReceiptWorkflowResult(
+                                persisted,
+                                savedMessage + " The new receipt is attached, but the old receipt could not be removed.",
+                                true
+                        );
+                    }
+                }
+                return new ReceiptWorkflowResult(persisted, savedMessage, false);
+            } catch (ServiceException exception) {
+                if (uploadedPath != null) {
+                    try {
+                        storageService.deleteReceipt(uploadedPath);
+                    } catch (ServiceException ignored) {
+                        // Do not hide the original failure from the user.
+                    }
+                }
+                if (existingPath == null) {
+                    try {
+                        expenseService.updateExpense(
+                                withReceipt(savedExpense, null, ReceiptStatus.UPLOAD_FAILED)
+                        );
+                    } catch (ServiceException ignored) {
+                        // The manual expense is still saved even if the status update fails.
+                    }
+                }
+                return new ReceiptWorkflowResult(
+                        savedExpense,
+                        savedMessage + " The receipt could not be uploaded: "
+                                + exception.getMessage()
+                                + " You can enter the details manually and try again.",
+                        true
+                );
+            }
+        }
+
+        if (selection.removeExisting && existingPath != null) {
+            try {
+                Expense withoutReceipt = withReceipt(savedExpense, null, ReceiptStatus.NO_RECEIPT);
+                Expense persisted = expenseService.updateExpense(withoutReceipt);
+                storageService.deleteReceipt(existingPath);
+                return new ReceiptWorkflowResult(persisted, savedMessage, false);
+            } catch (ServiceException exception) {
+                return new ReceiptWorkflowResult(
+                        savedExpense,
+                        savedMessage + " The receipt could not be removed: " + exception.getMessage(),
+                        true
+                );
+            }
+        }
+        return new ReceiptWorkflowResult(savedExpense, savedMessage, false);
+    }
+
+    private Expense withReceipt(Expense expense, String receiptPath, ReceiptStatus status) {
+        return new Expense(
+                expense.id(),
+                expense.userId(),
+                expense.categoryId(),
+                expense.merchant(),
+                expense.amount(),
+                expense.expenseDate(),
+                expense.paymentMethod(),
+                expense.description(),
+                receiptPath,
+                status,
+                expense.createdAt(),
+                Instant.now()
+        );
     }
 
     private Expense buildExpenseFromForm(
@@ -930,6 +1292,21 @@ public final class AppFrame extends JFrame {
         public String toString() {
             return label;
         }
+    }
+
+    private static final class ReceiptSelection {
+        private String receiptPath;
+        private ReceiptStatus status;
+        private Path localFile;
+        private boolean removeExisting;
+
+        private ReceiptSelection(String receiptPath, ReceiptStatus status) {
+            this.receiptPath = receiptPath;
+            this.status = status == null ? ReceiptStatus.NO_RECEIPT : status;
+        }
+    }
+
+    private record ReceiptWorkflowResult(Expense expense, String message, boolean warning) {
     }
 
     private static final class PlaceholderRenderer extends DefaultListCellRenderer {
