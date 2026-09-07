@@ -39,7 +39,8 @@ Java Swing desktop application for recording, organizing, analyzing, and reporti
 - The desktop client remains Java/Swing; no web frontend or separate custom backend is introduced.
 - Swing UI code calls service interfaces rather than constructing database or storage requests.
 - Supabase configuration is read from environment variables and values are never logged.
-- The first increment provides the shell and contracts without faking authenticated or persisted data.
+- Supabase Auth login and registration run through the Java HTTP client; sessions are memory-only and passwords are never persisted.
+- The first increment does not fake persisted expense data.
 
 ## Product
 

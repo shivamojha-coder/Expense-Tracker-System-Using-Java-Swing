@@ -1,5 +1,7 @@
 package com.expensetracker.ui;
 
+import com.expensetracker.model.User;
+import com.expensetracker.service.AuthService;
 import com.expensetracker.ui.components.MetricCard;
 
 import javax.swing.BorderFactory;
@@ -18,11 +20,15 @@ import java.awt.Font;
 import java.awt.GridLayout;
 
 public final class AppFrame extends JFrame {
+    private final User user;
+    private final AuthService authService;
     private final JPanel contentPanel = new JPanel(new BorderLayout());
     private final JLabel pageTitle = new JLabel("Dashboard");
 
-    public AppFrame() {
+    public AppFrame(User user, AuthService authService) {
         super("Expense Tracker");
+        this.user = user;
+        this.authService = authService;
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(1180, 760));
         setSize(1280, 820);
@@ -50,7 +56,7 @@ public final class AppFrame extends JFrame {
         pageTitle.setFont(pageTitle.getFont().deriveFont(Font.BOLD, 22f));
         pageTitle.setForeground(new Color(15, 23, 42));
         topBar.add(pageTitle, BorderLayout.WEST);
-        JLabel userLabel = new JLabel("Personal workspace  •  User");
+        JLabel userLabel = new JLabel("Personal workspace  •  " + user.email());
         userLabel.setForeground(new Color(100, 116, 139));
         topBar.add(userLabel, BorderLayout.EAST);
         return topBar;
@@ -75,9 +81,24 @@ public final class AppFrame extends JFrame {
         navigation.add(navButton("Reports", this::showReports));
         sidebar.add(navigation, BorderLayout.CENTER);
 
-        JButton logout = navButton("Log out", () -> dispose());
+        JButton logout = navButton("Log out", this::handleLogout);
         sidebar.add(logout, BorderLayout.SOUTH);
         return sidebar;
+    }
+
+    private void handleLogout() {
+        int choice = javax.swing.JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to log out?",
+                "Log out",
+                javax.swing.JOptionPane.YES_NO_OPTION
+        );
+        if (choice != javax.swing.JOptionPane.YES_OPTION) {
+            return;
+        }
+        authService.logout();
+        dispose();
+        new LoginFrame(com.expensetracker.config.AppConfig.fromEnvironment(), authService).setVisible(true);
     }
 
     private JButton navButton(String label, Runnable action) {

@@ -1,6 +1,9 @@
 package com.expensetracker.ui;
 
 import com.expensetracker.config.AppConfig;
+import com.expensetracker.model.User;
+import com.expensetracker.service.AuthService;
+import com.expensetracker.service.ServiceException;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -20,12 +23,17 @@ import java.awt.Insets;
 
 public final class LoginFrame extends JFrame {
     private final AppConfig config;
+    private final AuthService authService;
     private final JTextField emailField = new JTextField();
     private final JPasswordField passwordField = new JPasswordField();
+    private final JButton loginButton = new JButton("Log in");
+    private final JButton registerButton = new JButton("Create an account");
+    private final JLabel statusLabel = new JLabel(" ");
 
-    public LoginFrame(AppConfig config) {
+    public LoginFrame(AppConfig config, AuthService authService) {
         super("Expense Tracker");
         this.config = config;
+        this.authService = authService;
         configureFrame();
         buildUi();
     }
@@ -74,7 +82,6 @@ public final class LoginFrame extends JFrame {
         addFormField(form, c, 0, "Email", emailField);
         addFormField(form, c, 2, "Password", passwordField);
 
-        JButton loginButton = new JButton("Log in");
         loginButton.setPreferredSize(new Dimension(0, 42));
         loginButton.setBackground(new Color(15, 118, 110));
         loginButton.setForeground(Color.WHITE);
@@ -85,11 +92,10 @@ public final class LoginFrame extends JFrame {
         c.insets = new Insets(22, 0, 8, 0);
         form.add(loginButton, c);
 
-        JButton registerButton = new JButton("Create an account");
         registerButton.setBorderPainted(false);
         registerButton.setContentAreaFilled(false);
         registerButton.setForeground(new Color(15, 118, 110));
-        registerButton.addActionListener(event -> showNotReadyMessage("Registration will be connected to Supabase Auth in the next implementation increment."));
+        registerButton.addActionListener(event -> handleRegister());
         c.gridy = 5;
         c.insets = new Insets(4, 0, 0, 0);
         form.add(registerButton, c);
@@ -104,7 +110,13 @@ public final class LoginFrame extends JFrame {
         configurationHint.setForeground(config.isSupabaseConfigured()
                 ? new Color(22, 101, 52)
                 : new Color(180, 83, 9));
-        card.add(configurationHint, BorderLayout.SOUTH);
+        statusLabel.setHorizontalAlignment(JLabel.CENTER);
+        statusLabel.setForeground(new Color(180, 83, 9));
+        JPanel footer = new JPanel(new java.awt.BorderLayout(0, 8));
+        footer.setOpaque(false);
+        footer.add(statusLabel, java.awt.BorderLayout.NORTH);
+        footer.add(configurationHint, java.awt.BorderLayout.SOUTH);
+        card.add(footer, BorderLayout.SOUTH);
 
         GridBagConstraints rootConstraints = new GridBagConstraints();
         rootConstraints.gridx = 0;
@@ -142,10 +154,64 @@ public final class LoginFrame extends JFrame {
             showNotReadyMessage("Supabase is not configured yet. Set SUPABASE_URL and SUPABASE_ANON_KEY before connecting authentication.");
             return;
         }
-        showNotReadyMessage("Authentication service wiring is the next implementation increment.");
+        runAuthOperation("Signing in...", () -> authService.login(emailField.getText().trim(), passwordField.getPassword()));
+    }
+
+    private void handleRegister() {
+        if (emailField.getText().isBlank() || passwordField.getPassword().length == 0) {
+            JOptionPane.showMessageDialog(this, "Enter an email and password to create your account.", "Missing details", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!config.isSupabaseConfigured()) {
+            showNotReadyMessage("Supabase is not configured yet. Set SUPABASE_URL and SUPABASE_ANON_KEY before creating an account.");
+            return;
+        }
+        runAuthOperation("Creating your account...", () -> authService.register(emailField.getText().trim(), passwordField.getPassword()));
+    }
+
+    private void runAuthOperation(String status, AuthOperation operation) {
+        setBusy(true, status);
+        new javax.swing.SwingWorker<User, Void>() {
+            @Override
+            protected User doInBackground() {
+                return operation.run();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    User user = get();
+                    dispose();
+                    new AppFrame(user, authService).setVisible(true);
+                } catch (java.util.concurrent.ExecutionException exception) {
+                    Throwable cause = exception.getCause();
+                    String message = cause instanceof ServiceException
+                            ? cause.getMessage()
+                            : "Authentication failed. Please try again.";
+                    setBusy(false, message);
+                    JOptionPane.showMessageDialog(LoginFrame.this, message, "Authentication failed", JOptionPane.ERROR_MESSAGE);
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    setBusy(false, "Authentication was interrupted.");
+                }
+            }
+        }.execute();
+    }
+
+    private void setBusy(boolean busy, String status) {
+        loginButton.setEnabled(!busy);
+        registerButton.setEnabled(!busy);
+        emailField.setEnabled(!busy);
+        passwordField.setEnabled(!busy);
+        statusLabel.setText(status);
     }
 
     private void showNotReadyMessage(String message) {
         JOptionPane.showMessageDialog(this, message, "Expense Tracker", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    @FunctionalInterface
+    private interface AuthOperation {
+        User run();
     }
 }

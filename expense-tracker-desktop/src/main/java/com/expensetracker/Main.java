@@ -1,6 +1,8 @@
 package com.expensetracker;
 
 import com.expensetracker.config.AppConfig;
+import com.expensetracker.service.SupabaseAuthService;
+import com.expensetracker.supabase.SupabaseClient;
 import com.expensetracker.ui.LoginFrame;
 import com.expensetracker.ui.theme.AppTheme;
 
@@ -12,6 +14,8 @@ public final class Main {
 
     public static void main(String[] args) {
         AppTheme.install();
-        SwingUtilities.invokeLater(() -> new LoginFrame(AppConfig.fromEnvironment()).setVisible(true));
+        AppConfig config = AppConfig.fromEnvironment();
+        SupabaseAuthService authService = new SupabaseAuthService(new SupabaseClient(config));
+        SwingUtilities.invokeLater(() -> new LoginFrame(config, authService).setVisible(true));
     }
 }

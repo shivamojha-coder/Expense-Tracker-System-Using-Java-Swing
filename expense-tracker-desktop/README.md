@@ -16,7 +16,7 @@ mvn compile
 mvn exec:java
 ```
 
-The foundation starts with the authentication shell and a navigable application frame. Supabase authentication, database operations, storage, OCR, and reporting will be implemented behind the interfaces in later increments.
+The current increment includes Supabase Auth login and registration, an in-memory session for the running desktop process, and a navigable application frame. Database operations, storage, OCR, and reporting are still behind interfaces and will be implemented in later increments.
 
 ## Configuration
 
