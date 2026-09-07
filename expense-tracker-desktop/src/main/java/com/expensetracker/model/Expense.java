@@ -20,6 +20,9 @@ public record Expense(
         Instant updatedAt
 ) {
     public Expense {
+        if (userId == null) {
+            throw new IllegalArgumentException("User is required");
+        }
         if (merchant == null || merchant.isBlank()) {
             throw new IllegalArgumentException("Merchant must not be blank");
         }
@@ -28,6 +31,9 @@ public record Expense(
         }
         if (expenseDate == null) {
             throw new IllegalArgumentException("Expense date is required");
+        }
+        if (categoryId == null) {
+            throw new IllegalArgumentException("Category is required");
         }
         if (paymentMethod == null) {
             throw new IllegalArgumentException("Payment method is required");

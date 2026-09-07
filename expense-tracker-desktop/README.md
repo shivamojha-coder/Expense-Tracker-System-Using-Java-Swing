@@ -16,7 +16,7 @@ mvn compile
 mvn exec:java
 ```
 
-The current increment includes Supabase Auth login and registration, an in-memory session for the running desktop process, and a navigable application frame. Database operations, storage, OCR, and reporting are still behind interfaces and will be implemented in later increments.
+The current increment includes Supabase Auth login and registration, an in-memory session for the running desktop process, and a navigable application frame. Expenses now use the authenticated Supabase session for user-scoped create, read, update, delete, and local search/filter operations. Storage, OCR, and reporting remain behind interfaces for later increments.
 
 ## Configuration
 

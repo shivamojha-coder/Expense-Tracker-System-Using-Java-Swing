@@ -74,6 +74,11 @@ public final class SupabaseAuthService implements AuthService {
         return session;
     }
 
+    @Override
+    public synchronized String getAccessToken() {
+        return session == null ? "" : session.accessToken();
+    }
+
     private User authenticate(String email, char[] password, String endpoint) {
         String passwordValue = new String(password);
         Arrays.fill(password, '\0');

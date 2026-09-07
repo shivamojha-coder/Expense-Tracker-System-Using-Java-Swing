@@ -182,7 +182,7 @@ public final class LoginFrame extends JFrame {
                 try {
                     User user = get();
                     dispose();
-                    new AppFrame(user, authService).setVisible(true);
+                    new AppFrame(config, user, authService).setVisible(true);
                 } catch (java.util.concurrent.ExecutionException exception) {
                     Throwable cause = exception.getCause();
                     String message = cause instanceof ServiceException

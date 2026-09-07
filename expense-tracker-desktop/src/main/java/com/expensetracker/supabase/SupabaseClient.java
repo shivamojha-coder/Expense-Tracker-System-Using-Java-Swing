@@ -46,11 +46,18 @@ public final class SupabaseClient {
         }
 
         if ("POST".equalsIgnoreCase(method)) {
+            request.header("Prefer", "return=representation");
             request.POST(HttpRequest.BodyPublishers.ofString(body == null ? "" : body));
+        } else if ("PATCH".equalsIgnoreCase(method)) {
+            request.header("Prefer", "return=representation");
+            request.method("PATCH", HttpRequest.BodyPublishers.ofString(body == null ? "" : body));
         } else if ("DELETE".equalsIgnoreCase(method)) {
+            request.header("Prefer", "return=representation");
             request.DELETE();
-        } else {
+        } else if ("GET".equalsIgnoreCase(method)) {
             request.GET();
+        } else {
+            throw new ServiceException("Unsupported Supabase HTTP method: " + method);
         }
 
         try {
