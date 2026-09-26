@@ -97,8 +97,9 @@ public final class Tess4JOcrService implements OcrService {
             String lower = candidate.toLowerCase(Locale.ROOT);
             if (candidate.length() < 2 || candidate.length() > 80
                     || candidate.replaceAll("[^A-Za-z]", "").length() < 2
-                    || lower.matches(".*\\b(?:receipt|invoice|subtotal|tax|total|date|cash|visa|mastercard)\\b.*")
-                    || candidate.matches(".*\\d{3,}.*")) {
+                    || lower.matches(".*\\b(?:receipt|invoice|subtotal|tax|total|date|cash|visa|mastercard|items?|order|qty|price|thank\\s+you)\\b.*")
+                    || candidate.matches("^\\d{2,}\\s+.*")
+                    || candidate.matches(".*\\d{5,}.*")) {
                 continue;
             }
             return candidate;

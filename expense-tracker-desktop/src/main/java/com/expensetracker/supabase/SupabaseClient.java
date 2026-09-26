@@ -61,12 +61,16 @@ public final class SupabaseClient {
         }
 
         try {
-            return httpClient.send(request.build(), HttpResponse.BodyHandlers.ofString());
+            System.out.println("[Supabase] " + method + " " + endpoint(path));
+            HttpResponse<String> resp = httpClient.send(request.build(), HttpResponse.BodyHandlers.ofString());
+            System.out.println("[Supabase] Response code: " + resp.statusCode());
+            return resp;
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             throw new ServiceException("The Supabase request was interrupted.", interrupted);
         } catch (java.io.IOException exception) {
-            throw new ServiceException("Unable to reach Supabase. Check your internet connection.", exception);
+            System.err.println("[Supabase Error] " + exception.getClass().getName() + ": " + exception.getMessage());
+            throw new ServiceException("Unable to reach Supabase (" + exception.getMessage() + "). Check connection.", exception);
         }
     }
 }

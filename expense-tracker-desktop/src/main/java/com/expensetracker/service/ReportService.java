@@ -1,15 +1,31 @@
 package com.expensetracker.service;
 
+import com.expensetracker.model.Category;
 import com.expensetracker.model.Expense;
+import com.expensetracker.model.PaymentMethod;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 public interface ReportService {
     ReportSummary generateReport(List<Expense> expenses, LocalDate from, LocalDate to);
+
+    DetailedReport generateDetailedReport(
+            List<Expense> expenses,
+            List<Category> categories,
+            LocalDate from,
+            LocalDate to
+    );
+
+    void exportToCsv(DetailedReport report, List<Category> categories, Path destination) throws IOException;
+
+    void exportToPdf(DetailedReport report, List<Category> categories, Path destination, String userEmail) throws IOException;
 
     default DashboardSummary generateDashboard(List<Expense> expenses, LocalDate currentDate) {
         Objects.requireNonNull(expenses, "Expenses are required.");
@@ -45,8 +61,38 @@ public interface ReportService {
             LocalDate from,
             LocalDate to,
             List<Expense> expenses,
-            java.math.BigDecimal total,
+            BigDecimal total,
             int count
+    ) {
+    }
+
+    record CategoryBreakdown(
+            UUID categoryId,
+            String categoryName,
+            int count,
+            BigDecimal totalAmount,
+            double percentage
+    ) {
+    }
+
+    record PaymentBreakdown(
+            PaymentMethod paymentMethod,
+            int count,
+            BigDecimal totalAmount,
+            double percentage
+    ) {
+    }
+
+    record DetailedReport(
+            LocalDate from,
+            LocalDate to,
+            List<Expense> expenses,
+            BigDecimal totalAmount,
+            int count,
+            BigDecimal averageAmount,
+            Expense highestExpense,
+            List<CategoryBreakdown> categoryBreakdowns,
+            List<PaymentBreakdown> paymentBreakdowns
     ) {
     }
 
