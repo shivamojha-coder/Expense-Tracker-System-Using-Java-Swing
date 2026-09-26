@@ -1,50 +1,78 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# ==============================
+# Environment / Secrets
+# ==============================
+.env
+.env.*
+!.env.example
 
-# compiled output
-dist
-tmp
-out-tsc
-*.tsbuildinfo
-expense-tracker-desktop/target/
-.expo
-.expo-shared
+# ==============================
+# Maven / Java
+# ==============================
+target/
+*.class
+*.jar
+*.war
 
-# dependencies
-node_modules
+# Maven Wrapper - KEEP these
+!.mvn/
+!mvnw
+!mvnw.cmd
 
-# IDEs and editors
-/.idea
+# ==============================
+# IDEs / Editors
+# ==============================
+.idea/
+*.iml
 .project
 .classpath
-.c9/
-*.launch
 .settings/
-*.sublime-workspace
 
-# IDE - VSCode
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
+# ==============================
+# Build / Temporary
+# ==============================
+dist/
+tmp/
+out/
+out-tsc/
+*.tsbuildinfo
 
+# ==============================
+# Dependencies
+# ==============================
+node_modules/
+
+# ==============================
 # System Files
+# ==============================
 .DS_Store
 Thumbs.db
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
+# ==============================
+# Logs
+# ==============================
+*.log
+npm-debug.log
+yarn-error.log
+testem.log
 
+# ==============================
+# Coverage
+# ==============================
+coverage/
+
+# ==============================
 # Replit
+# ==============================
 .cache/
 .local/
+
+# ==============================
+# Other
+# ==============================
+.cursor/
