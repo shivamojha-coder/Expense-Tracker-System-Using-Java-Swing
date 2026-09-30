@@ -42,6 +42,12 @@ public final class SupabaseAuthService implements AuthService {
             JsonNode payload = parse(response.body());
             JsonNode userNode = payload.path("user");
             if (userNode.isMissingNode() || userNode.path("id").asText().isBlank()) {
+                // Projects that require email confirmation return the user
+                // object directly at the top level instead of nested under
+                // "user" (no session is created until the address is confirmed).
+                userNode = payload;
+            }
+            if (userNode.path("id").asText().isBlank()) {
                 throw new ServiceException("Supabase returned an invalid registration response.");
             }
 
