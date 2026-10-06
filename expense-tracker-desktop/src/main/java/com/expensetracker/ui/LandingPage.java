@@ -1,10 +1,10 @@
 package com.expensetracker.ui;
 
-import com.expensetracker.ui.theme.ThemeColors;
-
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -12,9 +12,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
-import javax.swing.JTextArea;
 import javax.swing.border.EmptyBorder;
-import javax.imageio.ImageIO;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -24,79 +22,84 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.FontMetrics;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.LinearGradientPaint;
+import java.awt.Point;
+import java.awt.RadialGradientPaint;
 import java.awt.Rectangle;
-import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Arc2D;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
+import java.awt.geom.Point2D;
 import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
 
 /**
- * Premium Java Swing + FlatLaf Landing Page for Expense Tracker Desktop.
- * Designed with a consistent teal/green SaaS palette, real Swing components,
- * custom Java2D vector illustrations, responsive layout, and zero horizontal clipping.
+ * Landing page for Expense Tracker Desktop: navbar, hero, features, workflow,
+ * security, benefits, call to action and footer. All artwork is drawn with
+ * Java2D or taken from /images, and the layout tracks the viewport width.
  */
 public final class LandingPage extends JPanel {
 
-    // --- Premium Brand Color System ---
-    private static final Color C_BG          = new Color(0xF7, 0xF9, 0xF8);
-    private static final Color C_WHITE       = Color.WHITE;
-    private static final Color C_DARK_TEAL   = new Color(0x06, 0x3B, 0x2E);
-    private static final Color C_DEEP_GREEN  = new Color(0x07, 0x5C, 0x45);
-    private static final Color C_ACCENT      = new Color(0x18, 0xC7, 0x8A);
-    private static final Color C_ACCENT_HOV  = new Color(0x15, 0xB0, 0x7A);
-    private static final Color C_PRI_TEXT    = new Color(0x17, 0x21, 0x1D);
-    private static final Color C_SEC_TEXT    = new Color(0x5A, 0x6B, 0x64);
-    private static final Color C_MUTED_TEXT  = new Color(0x8A, 0x9B, 0x94);
-    private static final Color C_BORDER      = new Color(0xDD, 0xE5, 0xE1);
-    private static final Color C_CARD_BG     = Color.WHITE;
-    private static final Color C_SURFACE     = new Color(0xFA, 0xFB, 0xFA);
-    private static final Color C_BADGE_BG    = new Color(0xE8, 0xF8, 0xF2);
-    private static final Color C_BADGE_BD    = new Color(0xA7, 0xE9, 0xCD);
-    private static final Color C_ICON_BG     = new Color(0xEE, 0xF9, 0xF4);
-    private static final Color C_ICON_BD     = new Color(0xD2, 0xF0, 0xE3);
-    private static final Color C_FOOTER_BG   = new Color(0x04, 0x2A, 0x21);
+    private static final Color C_PAGE = new Color(0xF8, 0xFA, 0xF9);
+    private static final Color C_WHITE = Color.WHITE;
+    private static final Color C_INK = new Color(0x13, 0x1F, 0x1A);
+    private static final Color C_DARK_TEAL = new Color(0x06, 0x3B, 0x2E);
+    private static final Color C_BRAND = new Color(0x0A, 0x5E, 0x46);
+    private static final Color C_BRAND_HOV = new Color(0x07, 0x4A, 0x37);
+    private static final Color C_GREEN = new Color(0x0E, 0x8F, 0x5F);
+    private static final Color C_MINT = new Color(0x2E, 0xCC, 0x8F);
+    private static final Color C_TEXT2 = new Color(0x4F, 0x5F, 0x58);
+    private static final Color C_TEXT3 = new Color(0x8A, 0x9B, 0x94);
+    private static final Color C_BORDER = new Color(0xDD, 0xE7, 0xE2);
+    private static final Color C_ICON_BG = new Color(0xE6, 0xF6, 0xEE);
+    private static final Color C_ICON_BD = new Color(0xC6, 0xEA, 0xD8);
+    private static final Color C_FOOTER = new Color(0x05, 0x2B, 0x22);
 
-    private static Font fontB(float size) { return new Font("Segoe UI", Font.BOLD, (int) size); }
-    private static Font fontP(float size) { return new Font("Segoe UI", Font.PLAIN, (int) size); }
-    private static Font fontM(float size) { return new Font("Segoe UI", Font.BOLD, (int) size); }
+    private static Font font(int style, float size) {
+        return UiKit.font(style, size);
+    }
 
     private final Runnable onSignUp;
     private final Runnable onLogin;
 
     private JScrollPane scrollPane;
-    private JPanel featuresSection;
+    private JPanel featuresAnchor;
     private JPanel howItWorksSection;
     private JPanel securitySection;
+    private JPanel whySection;
+    private JPanel ctaSection;
 
     public LandingPage(Runnable onSignUp, Runnable onLogin) {
         this.onSignUp = onSignUp;
         this.onLogin = onLogin;
 
         setLayout(new BorderLayout());
-        setBackground(C_BG);
+        setBackground(C_PAGE);
 
-        // Content panel implements Scrollable to strictly eliminate horizontal scrolling
         ScrollableContentPanel content = new ScrollableContentPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBackground(C_BG);
+        content.setBackground(C_PAGE);
 
-        // Build all page sections
         content.add(buildNavbar());
-        content.add(buildHero());
+        content.add(new HeroPanel());
         content.add(buildFeatures());
         content.add(buildHowItWorks());
         content.add(buildSecurity());
-        content.add(buildFinalCta());
+        content.add(buildWhyUsers());
+        content.add(ctaSection = new CtaPanel());
         content.add(buildFooter());
 
         scrollPane = new JScrollPane(content);
@@ -104,210 +107,717 @@ public final class LandingPage extends JPanel {
         scrollPane.getVerticalScrollBar().setUnitIncrement(24);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-
+        scrollPane.getViewport().addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                content.revalidate();
+                content.repaint();
+            }
+        });
         add(scrollPane, BorderLayout.CENTER);
     }
 
     // ==========================================
-    // 1. Navigation Bar
+    // Navbar
     // ==========================================
     private JPanel buildNavbar() {
-        JPanel bar = new JPanel(new GridBagLayout());
+        JPanel bar = new JPanel(new GridBagLayout()) {
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, 76);
+            }
+        };
         bar.setBackground(C_WHITE);
         bar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, C_BORDER),
-                BorderFactory.createEmptyBorder(0, 48, 0, 48)
-        ));
-        bar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 84));
-        bar.setPreferredSize(new Dimension(1200, 84));
+                new EmptyBorder(0, 56, 0, 56)));
+        bar.setPreferredSize(new Dimension(1200, 76));
 
-        // Brand Logo + Title
-        JPanel brand = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        brand.setOpaque(false);
-        JLabel logoIcon = new JLabel(new javax.swing.ImageIcon(
-                loadImage("/images/app-logo.png").getScaledInstance(64, 48, Image.SCALE_SMOOTH)));
-        logoIcon.setPreferredSize(new Dimension(68, 52));
-        JLabel name = new JLabel("Expense Tracker");
-        name.setFont(fontB(18));
-        name.setForeground(C_DARK_TEAL);
-        brand.add(logoIcon);
-        brand.add(name);
-        // Middle Navigation Links
-        JPanel links = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 0));
+        JPanel brand = row(10,
+                new JLabel(new LogoIcon(new SmoothImage(loadImage("/images/app-logo.png")), 56, 42)),
+                label("Expense Tracker", Font.BOLD, 17.5f, C_INK));
+
+        JPanel links = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 0));
         links.setOpaque(false);
-        links.add(navLink("Features", () -> scrollTo(featuresSection)));
+        links.add(navLink("Features", () -> scrollTo(featuresAnchor)));
         links.add(navLink("How It Works", () -> scrollTo(howItWorksSection)));
         links.add(navLink("Security", () -> scrollTo(securitySection)));
-        // Actions: Log In + Sign Up
-        JPanel acts = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
-        acts.setOpaque(false);
-        acts.add(textBtn("Log In", onLogin));
-        acts.add(pillBtn("Sign Up", onSignUp, true));
-        // Equal flexible outer columns keep the navigation links centered in the full window,
-        // independent of the different widths of the brand and action groups.
-        GridBagConstraints nav = new GridBagConstraints();
-        nav.gridy = 0;
-        nav.fill = GridBagConstraints.NONE;
-        nav.weightx = 1.0;
-        nav.anchor = GridBagConstraints.WEST;
-        bar.add(brand, nav);
+        links.add(navLink("Testimonials", () -> scrollTo(whySection)));
 
-        nav.gridx = 1;
-        nav.weightx = 0.0;
-        nav.anchor = GridBagConstraints.CENTER;
-        bar.add(links, nav);
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        actions.setOpaque(false);
+        actions.add(new ActionButton("Log In", null, false, 90, 38, onLogin));
+        actions.add(new ActionButton("Sign Up", null, true, 96, 38, onSignUp));
 
-        nav.gridx = 2;
-        nav.weightx = 1.0;
-        nav.anchor = GridBagConstraints.EAST;
-        bar.add(acts, nav);
-
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridy = 0;
+        c.weightx = 1.0;
+        c.anchor = GridBagConstraints.WEST;
+        bar.add(brand, c);
+        c.gridx = 1;
+        c.weightx = 0.0;
+        c.anchor = GridBagConstraints.CENTER;
+        bar.add(links, c);
+        c.gridx = 2;
+        c.weightx = 1.0;
+        c.anchor = GridBagConstraints.EAST;
+        bar.add(actions, c);
         return bar;
     }
 
-    // ==========================================
-    // 2. Hero Section
-    // ==========================================
-    private JPanel buildHero() {
-        JPanel heroWrap = new JPanel(new BorderLayout());
-        heroWrap.setOpaque(false);
-        heroWrap.setBorder(new EmptyBorder(40, 48, 48, 48));
+    private JButton navLink(String text, Runnable action) {
+        JButton btn = new JButton(text);
+        btn.setFont(font(Font.PLAIN, 14.5f));
+        btn.setForeground(C_INK);
+        btn.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> action.run());
+        btn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btn.setForeground(C_GREEN);
+            }
 
-        JPanel container = new JPanel(new GridBagLayout());
-        container.setOpaque(false);
-
-        GridBagConstraints g = new GridBagConstraints();
-        g.fill = GridBagConstraints.BOTH;
-        g.weighty = 1.0;
-
-        // Left Column: Value Proposition & CTAs
-        JPanel left = new JPanel();
-        left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
-        left.setOpaque(false);
-
-        // Top Pill Badge
-        JPanel badgeWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        badgeWrap.setOpaque(false);
-        JLabel badge = new JLabel("  ✦  A SMARTER WAY TO MANAGE YOUR MONEY  ");
-        badge.setOpaque(true);
-        badge.setBackground(C_BADGE_BG);
-        badge.setForeground(C_DEEP_GREEN);
-        badge.setFont(fontB(11));
-        badge.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(C_BADGE_BD, 1, true),
-                BorderFactory.createEmptyBorder(6, 12, 6, 12)
-        ));
-        badgeWrap.add(badge);
-        badgeWrap.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        // Dual-tone Hero Title
-        JLabel h1 = new JLabel("Take Control");
-        h1.setFont(fontB(48));
-        h1.setForeground(C_DARK_TEAL);
-        h1.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel h2 = new JLabel("of Every Expense");
-        h2.setFont(fontB(48));
-        h2.setForeground(C_ACCENT);
-        h2.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        // Subtitle Description
-        JLabel desc = new JLabel("<html><body style='width:420px; line-height:1.55; color:#5A6B64; font-size:14px;'>"
-                + "Track spending in real time, extract receipt data with optical character recognition (OCR), "
-                + "manage budgets, and export financial reports — all in one private, offline-capable desktop suite."
-                + "</body></html>");
-        desc.setFont(fontP(14));
-        desc.setForeground(C_SEC_TEXT);
-        desc.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        // CTA Buttons Row
-        JPanel cta = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
-        cta.setOpaque(false);
-        cta.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JButton su = pillBtn("Sign Up  →", onSignUp, true);
-        su.setPreferredSize(new Dimension(156, 46));
-        su.setFont(fontB(14));
-
-        JButton li = outlineBtn("Log In", onLogin);
-        li.setPreferredSize(new Dimension(120, 46));
-        li.setFont(fontB(14));
-
-        JButton exp = new JButton("Explore Features ↓");
-        exp.setFont(fontP(13));
-        exp.setForeground(C_SEC_TEXT);
-        exp.setContentAreaFilled(false);
-        exp.setBorderPainted(false);
-        exp.setFocusPainted(false);
-        exp.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        exp.addActionListener(e -> scrollTo(featuresSection));
-        exp.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { exp.setForeground(C_DEEP_GREEN); }
-            public void mouseExited(MouseEvent e) { exp.setForeground(C_SEC_TEXT); }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btn.setForeground(C_INK);
+            }
         });
-
-        cta.add(su);
-        cta.add(li);
-        cta.add(exp);
-
-        // Trust Pills Row
-        JPanel trust = new JPanel(new FlowLayout(FlowLayout.LEFT, 18, 0));
-        trust.setOpaque(false);
-        trust.setAlignmentX(Component.LEFT_ALIGNMENT);
-        trust.add(trustItem("100% Private & Secure"));
-        trust.add(trustItem("Smart Receipt OCR"));
-        trust.add(trustItem("PDF & CSV Export"));
-
-        left.add(badgeWrap);
-        left.add(Box.createVerticalStrut(18));
-        left.add(h1);
-        left.add(h2);
-        left.add(Box.createVerticalStrut(14));
-        left.add(desc);
-        left.add(Box.createVerticalStrut(26));
-        left.add(cta);
-        left.add(Box.createVerticalStrut(22));
-        left.add(trust);
-
-        // GridBag columns: Left 52%, Right 48%
-        g.gridx = 0;
-        g.weightx = 0.52;
-        g.insets = new Insets(0, 0, 0, 36);
-        container.add(left, g);
-
-        g.gridx = 1;
-        g.weightx = 0.48;
-        g.insets = new Insets(0, 0, 0, 0);
-        container.add(buildHeroLaptopPreview(), g);
-
-        heroWrap.add(container, BorderLayout.CENTER);
-        return heroWrap;
+        return btn;
     }
 
-    private JPanel trustItem(String text) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+    // ==========================================
+    // Hero
+    // ==========================================
+    private final class HeroPanel extends JPanel {
+        private static final int HEADER_GAP = 46;
+        private static final int HERO_FADE = 56;
+        private static final int BOTTOM_PAD = 34;
+        private final SmoothImage background = new SmoothImage(loadImage("/images/hero-background.png"));
+        private final SmoothImage laptop = new SmoothImage(loadImage("/images/hero-laptop-preview.png"));
+        private final JPanel text = buildHeroText();
+        private final JPanel header = buildFeaturesHeader();
+
+        HeroPanel() {
+            setLayout(null);
+            setBackground(C_PAGE);
+            add(text);
+            add(header);
+        }
+
+        /** Height of the first screen: the viewport minus the navbar, so the hero fills the window. */
+        private int top() {
+            int viewport = scrollPane == null ? 0 : scrollPane.getViewport().getHeight();
+            return viewport <= 0 ? 700 : Math.max(560, Math.min(1100, viewport - 76));
+        }
+
+        private int totalHeight() {
+            return top() + HEADER_GAP + header.getPreferredSize().height + BOTTOM_PAD;
+        }
+
+        @Override
+        public Dimension getPreferredSize() {
+            return new Dimension(1200, totalHeight());
+        }
+
+        @Override
+        public Dimension getMaximumSize() {
+            return new Dimension(Integer.MAX_VALUE, totalHeight());
+        }
+
+        /**
+         * Size and position of the laptop picture: as large as the window allows while its screen stays
+         * clear of the hero text, and with its base resting on the tabletop of the background photo.
+         * The screen starts about 24% into the image width, so its left edge is x + 0.243 * width.
+         */
+        private Rectangle laptopRect(int w, int top, int textRight) {
+            double aspect = laptop.width() / (double) laptop.height();
+            int rightMargin = (int) (w * 0.05);
+            int clearOfText = (int) ((w - rightMargin - textRight - 16) / 0.757);
+            int lw = (int) Math.min(Math.min(w * 0.76, clearOfText), top * 0.90 * aspect);
+            lw = Math.max(lw, 320);
+            int lh = (int) Math.round(lw / aspect);
+            int lx = w - lw - rightMargin;
+
+            // The tabletop begins ~80% down the photo; rest the base halfway down the visible table.
+            double photoScale = Math.max(w / (double) background.width(), (top + HERO_FADE) / (double) background.height());
+            double photoHeight = background.height() * photoScale;
+            int tableEdge = (int) ((top + HERO_FADE) - photoHeight + 0.80 * photoHeight);
+            int baseY = tableEdge + (int) ((top - tableEdge) * 0.50);
+            int ly = baseY - (int) Math.round(lh * 0.983);   // the image has ~2% empty margin below the base
+            return new Rectangle(lx, ly, lw, lh);
+        }
+
+        @Override
+        public void doLayout() {
+            Dimension tp = text.getPreferredSize();
+            int x = Math.max(40, (int) (getWidth() * 0.055));
+            int top = top();
+
+            // The text block spans the laptop's screen: its top lines up with the top of the glass and its
+            // bottom with the bottom of the glass, measured on the screen's left edge (the side facing the
+            // text): about 12% to 86% of the picture's height.
+            Rectangle laptopBounds = laptopRect(getWidth(), top, x + tp.width);
+            int screenTop = laptopBounds.y + (int) (laptopBounds.height * 0.12);
+            int screenBottom = laptopBounds.y + (int) (laptopBounds.height * 0.86);
+            int height = Math.max(tp.height, screenBottom - screenTop);
+            text.setBounds(x, (screenTop + screenBottom) / 2 - height / 2, tp.width, height);
+            header.setBounds(0, top + HEADER_GAP, getWidth(), header.getPreferredSize().height);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            int w = getWidth();
+            // The photo (table included) is shown untouched across the first screen. Only a short fade
+            // below that edge blends it into the page colour behind the "Everything You Need" heading.
+            int top = top();
+            g2.setClip(0, 0, w, top + HERO_FADE);
+            drawCover(g2, background, w, top + HERO_FADE);
+            g2.setPaint(new GradientPaint(0, top, new Color(0xF8, 0xFA, 0xF9, 0),
+                    0, top + HERO_FADE, new Color(0xF8, 0xFA, 0xF9, 255)));
+            g2.fillRect(0, top, w, HERO_FADE);
+            g2.setClip(null);
+
+            Rectangle laptopBounds = laptopRect(w, top, text.getX() + text.getWidth());
+            int lx = laptopBounds.x;
+            int ly = laptopBounds.y;
+            int lw = laptopBounds.width;
+            int lh = laptopBounds.height;
+            int baseY = ly + (int) Math.round(lh * 0.983);   // lowest visible point of the laptop base
+
+            // Soft contact shadow flattened onto the table, directly under the base.
+            Graphics2D contact = (Graphics2D) g2.create();
+            float radius = lw * 0.50f;
+            contact.translate(lx + lw * 0.52, baseY - lh * 0.01);
+            contact.scale(1.0, 0.09);
+            contact.setPaint(new RadialGradientPaint(new Point2D.Float(0, 0), radius, new float[]{0f, 0.6f, 1f},
+                    new Color[]{new Color(45, 28, 10, 190), new Color(45, 28, 10, 95), new Color(45, 28, 10, 0)}));
+            contact.fill(new Ellipse2D.Float(-radius, -radius, radius * 2, radius * 2));
+            contact.dispose();
+
+            // Shadows only along the base (below the screen): a wider soft one and a tight dark one that
+            // hugs the bottom edge, which is what makes the laptop look planted instead of hovering.
+            // The soft one is built from stacked bands that start at different heights, so it fades in
+            // gradually instead of ending at a visible horizontal edge.
+            for (int band = 0; band < 6; band++) {
+                Graphics2D soft = (Graphics2D) g2.create();
+                soft.clipRect(lx - 40, ly + (int) (lh * (0.80 + band * 0.025)), lw + 80, lh);
+                laptop.drawShadow(soft, lx, ly, lw, lh, 14, 10, 0.10f);
+                soft.dispose();
+            }
+            Graphics2D tight = (Graphics2D) g2.create();
+            tight.clipRect(lx - 40, ly + (int) (lh * 0.90), lw + 80, lh);
+            laptop.drawShadow(tight, lx, ly, lw, lh, 5, 4, 0.72f);
+            tight.dispose();
+            laptop.draw(g2, lx, ly, lw, lh);
+            g2.dispose();
+        }
+    }
+
+    /** A vertical gap that keeps at least {@code minimum} pixels but grows when the text block is stretched. */
+    private static Component flexGap(int minimum, int stretch) {
+        return new Box.Filler(new Dimension(0, minimum), new Dimension(0, minimum), new Dimension(0, minimum + stretch));
+    }
+
+    private JPanel buildHeroText() {
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setOpaque(false);
-        VectorIcon check = new VectorIcon("check", 14, C_ACCENT);
-        JLabel lbl = new JLabel(text);
-        lbl.setFont(fontP(12));
-        lbl.setForeground(C_SEC_TEXT);
-        p.add(check);
-        p.add(lbl);
+
+        p.add(left(new Badge("Desktop App", "monitor", C_GREEN, C_ICON_BG, C_ICON_BD, 12f)));
+        p.add(flexGap(18, 60));
+        p.add(left(new TextLine("Track Expenses", font(Font.BOLD, 48), C_INK, 1.1f, -0.025f)));
+        p.add(left(new TextLine("Easily. Make", font(Font.BOLD, 48), C_INK, 1.1f, -0.025f)));
+        p.add(left(new TextLine("Smarter Decisions.", font(Font.BOLD, 48), C_GREEN, 1.1f, -0.025f)));
+        p.add(flexGap(16, 60));
+        p.add(left(new WrappedText(
+                "Scan receipts, track spending in real time, and get clear insights — all in a private, offline-capable desktop app.",
+                font(Font.PLAIN, 16f), new Color(0x4A, 0x58, 0x52), 1.55f, 440, SwingConstants.LEFT)));
+        p.add(flexGap(26, 60));
+
+        p.add(left(row(12,
+                new ActionButton("Download for Windows  →", "download", true, 226, 46, onSignUp),
+                new ActionButton("See how it works", "play", false, 176, 46, () -> scrollTo(howItWorksSection)).softBorder())));
+        p.add(flexGap(22, 60));
+
+        Font tf = font(Font.PLAIN, 12.5f);
+        Color tc = new Color(0x62, 0x70, 0x6A);
+        p.add(left(row(22,
+                new IconLabel("wifi", "Offline mode", tf, tc, tc, 15, 7),
+                new IconLabel("card-off", "No credit card required", tf, tc, tc, 15, 7),
+                new IconLabel("lock", "100% private", tf, tc, tc, 15, 7))));
         return p;
     }
 
     // ==========================================
-    // 3. Local Laptop Dashboard Preview
+    // Features
     // ==========================================
-    private JPanel buildHeroLaptopPreview() {
-        JPanel preview = new JPanel(new BorderLayout());
-        preview.setOpaque(false);
-        preview.setBorder(new EmptyBorder(4, 0, 4, 0));
-        preview.add(new ResponsiveImagePanel(loadImage("/images/hero-laptop-preview.png")), BorderLayout.CENTER);
-        return preview;
+    private JPanel buildFeatures() {
+        SectionPanel sec = new SectionPanel(C_PAGE, null);
+        sec.setLayout(new BoxLayout(sec, BoxLayout.Y_AXIS));
+        sec.setBorder(new EmptyBorder(0, 64, 64, 64));
+
+        JPanel grid = new JPanel(new GridLayout(2, 3, 24, 24));
+        grid.setOpaque(false);
+        grid.add(featureCard("receipt", "Receipt OCR Scanning",
+                "Scan or drop receipts and invoices. Built-in Tess4J automatically extracts merchant names, dates, and amounts."));
+        grid.add(featureCard("chart", "Smart Visual Insights",
+                "Interactive charts to understand where your money goes across categories, payment methods, and timelines."));
+        grid.add(featureCard("file", "Executive PDF & CSV Reports",
+                "Generate comprehensive financial summaries. Export to PDF or CSV ready for accountants and audits."));
+        grid.add(featureCard("search", "Deep Search & Filters",
+                "Find any transaction in milliseconds. Filter by category, payment method, date range, and custom notes."));
+        grid.add(featureCard("cloud", "Instant Data Mobility",
+                "Keep complete ownership of your data. Export your entire transaction archive or filtered sets whenever you need them."));
+        grid.add(featureCard("shield", "Row-Level Security & Privacy",
+                "Backed by Supabase Auth with strict Row-Level Security policies. Your data is encrypted and accessible only to you."));
+        sec.add(grid);
+        return sec;
     }
 
-    private static Image loadImage(String resourcePath) {
+    private JPanel buildFeaturesHeader() {
+        featuresAnchor = sectionHeader(null, "Everything You Need for Financial Control",
+                "From intelligent receipt scanning to executive reports — Expense Tracker brings all the essential tools together in one place.",
+                640);
+        return featuresAnchor;
+    }
+
+    private JPanel featureCard(String icon, String title, String desc) {
+        CardPanel card = new CardPanel(14, new Color(0xFC, 0xFD, 0xFC), C_BORDER, false);
+        card.setHoverStyle(new Color(0xF2, 0xFA, 0xF5), C_MINT);
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBorder(new EmptyBorder(26, 28, 26, 28));
+
+        card.add(left(new IconBox(icon, 52, 26, false)));
+        card.add(Box.createVerticalStrut(20));
+        card.add(left(label(title, Font.BOLD, 17.5f, C_INK)));
+        card.add(Box.createVerticalStrut(10));
+        card.add(left(new WrappedText(desc, font(Font.PLAIN, 14f), C_TEXT2, 1.6f, 0, SwingConstants.LEFT)));
+        card.add(Box.createVerticalGlue());
+        return card;
+    }
+
+    // ==========================================
+    // How it works
+    // ==========================================
+    private JPanel buildHowItWorks() {
+        SectionPanel sec = new SectionPanel(new Color(0xF6, 0xFA, 0xF8), new Color(0xE8, 0xF2, 0xEC));
+        howItWorksSection = sec;
+        sec.setLayout(new BoxLayout(sec, BoxLayout.Y_AXIS));
+        sec.setBorder(new EmptyBorder(62, 56, 62, 56));
+
+        sec.add(sectionHeader("SIMPLE WORKFLOW", "How Expense Tracker Works",
+                "Go from a receipt in your hand to meaningful financial insights in three simple steps.", 700));
+        sec.add(Box.createVerticalStrut(36));
+
+        JPanel row = new JPanel(new GridBagLayout());
+        row.setOpaque(false);
+        GridBagConstraints c = new GridBagConstraints();
+        c.fill = GridBagConstraints.BOTH;
+        c.weighty = 1;
+        c.gridy = 0;
+
+        c.gridx = 0;
+        c.weightx = 1;
+        row.add(stepCard("01", "Capture", "Scan or add a receipt manually.", captureBody()), c);
+        c.gridx = 1;
+        c.weightx = 0;
+        c.fill = GridBagConstraints.NONE;
+        row.add(new ArrowConnector(), c);
+        c.fill = GridBagConstraints.BOTH;
+        c.gridx = 2;
+        c.weightx = 1;
+        row.add(stepCard("02", "Categorize", "Details are extracted automatically.", categorizeBody()), c);
+        c.gridx = 3;
+        c.weightx = 0;
+        c.fill = GridBagConstraints.NONE;
+        row.add(new ArrowConnector(), c);
+        c.fill = GridBagConstraints.BOTH;
+        c.gridx = 4;
+        c.weightx = 1;
+        row.add(stepCard("03", "Understand", "View charts, track budgets and export reports.", understandBody()), c);
+        sec.add(row);
+        return sec;
+    }
+
+    private JPanel stepCard(String number, String title, String subtitle, JComponent body) {
+        CardPanel card = new CardPanel(14, C_WHITE, C_BORDER, true) {
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(300, super.getPreferredSize().height);
+            }
+        };
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBorder(new EmptyBorder(20, 22, 26, 22));
+
+        card.add(left(new Badge(number, null, C_GREEN, C_ICON_BG, C_ICON_BD, 11f)));
+        card.add(Box.createVerticalStrut(10));
+        card.add(left(label(title, Font.BOLD, 19f, C_INK)));
+        card.add(Box.createVerticalStrut(4));
+        card.add(left(label(subtitle, Font.PLAIN, 13f, C_TEXT2)));
+        card.add(Box.createVerticalStrut(14));
+        body.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(body);
+        return card;
+    }
+
+    private JComponent captureBody() {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        ReceiptArt art = new ReceiptArt();
+        art.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(art);
+        p.add(Box.createVerticalStrut(12));
+        ActionButton scan = new ActionButton("Scan Receipt", "scan", true, 200, 42, null).fullWidth();
+        scan.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(scan);
+        return p;
+    }
+
+    private JComponent categorizeBody() {
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        form.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(0xE6, 0xEE, 0xEA), 1, true),
+                new EmptyBorder(8, 12, 8, 12)));
+        String[] labels = {"Merchant", "Date", "Amount", "Category", "Payment Method", "Notes"};
+        JComponent[] values = {
+                plainValue("Starbucks", false), plainValue("Sep 26, 2026", false), plainValue("₹340.00", true),
+                new ValueBox("utensils", "Food & Dining", C_INK, true),
+                new ValueBox("card", "Credit Card", C_INK, true),
+                new ValueBox(null, "Add a note (optional)", C_TEXT3, false)
+        };
+        for (int i = 0; i < labels.length; i++) {
+            GridBagConstraints c = new GridBagConstraints();
+            c.gridy = i;
+            c.insets = new Insets(5, 0, 5, 8);
+            c.anchor = GridBagConstraints.WEST;
+            c.weightx = 0.36;
+            form.add(label(labels[i], Font.PLAIN, 12f, C_TEXT2), c);
+            c.gridx = 1;
+            c.weightx = 0.64;
+            c.insets = new Insets(5, 0, 5, 0);
+            c.fill = GridBagConstraints.HORIZONTAL;
+            form.add(values[i], c);
+        }
+        return form;
+    }
+
+    private JComponent plainValue(String text, boolean bold) {
+        JLabel l = label(text, bold ? Font.BOLD : Font.PLAIN, 13f, C_INK);
+        l.setBorder(new EmptyBorder(0, 2, 0, 0));
+        return l;
+    }
+
+    private JComponent understandBody() {
+        JPanel p = new JPanel(new GridLayout(2, 1, 0, 8));
+        p.setOpaque(false);
+        p.add(new MonthlyChart());
+        p.add(new CategoryDonut());
+        return p;
+    }
+
+    // ==========================================
+    // Security
+    // ==========================================
+    private JPanel buildSecurity() {
+        SecurityPanel sec = new SecurityPanel();
+        securitySection = sec;
+        sec.setLayout(new GridBagLayout());
+        sec.setBorder(new EmptyBorder(58, 64, 58, 48));
+
+        JPanel text = new JPanel();
+        text.setOpaque(false);
+        text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
+        text.add(Box.createVerticalGlue());
+        text.add(left(new TextLine("YOUR DATA, YOURS", font(Font.BOLD, 12f), new Color(0x7F, 0xE3, 0xB8), 1.4f, 0.14f)));
+        text.add(Box.createVerticalStrut(14));
+        text.add(left(new TextLine("Enterprise-Grade Security", font(Font.BOLD, 38f), C_WHITE, 1.15f, -0.02f)));
+        text.add(left(new TextLine("& Complete Privacy", font(Font.BOLD, 38f), C_WHITE, 1.15f, -0.02f)));
+        text.add(Box.createVerticalStrut(14));
+        text.add(left(new WrappedText(
+                "Every record, receipt scan, and category is protected with modern security standards. "
+                        + "Only your authenticated account can access your data, and it never leaves your control.",
+                font(Font.PLAIN, 16f), new Color(0xD3, 0xE6, 0xDD), 1.65f, 520, SwingConstants.LEFT)));
+        text.add(Box.createVerticalStrut(28));
+
+        Font ff = font(Font.BOLD, 13f);
+        Color ft = new Color(0xE8, 0xF5, 0xEF);
+        Color fi = new Color(0x5E, 0xE0, 0xAE);
+        text.add(left(row(34,
+                new IconLabel("lock", "Row-Level Security (RLS)\nIsolation", ff, ft, fi, 28, 12),
+                new IconLabel("database", "Encrypted Data\nat Rest & in Transit", ff, ft, fi, 28, 12),
+                new IconLabel("laptop", "Local Offline\nDemo Mode", ff, ft, fi, 28, 12))));
+        text.add(Box.createVerticalGlue());
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.fill = GridBagConstraints.BOTH;
+        c.weighty = 1;
+        c.gridx = 0;
+        c.weightx = 0.56;
+        sec.add(text, c);
+        c.gridx = 1;
+        c.weightx = 0.44;
+        sec.add(new ShieldArt(), c);
+        return sec;
+    }
+
+    // ==========================================
+    // Why users choose
+    // ==========================================
+    private JPanel buildWhyUsers() {
+        SectionPanel sec = new SectionPanel(C_PAGE, null);
+        whySection = sec;
+        sec.setLayout(new BoxLayout(sec, BoxLayout.Y_AXIS));
+        sec.setBorder(new EmptyBorder(60, 64, 60, 64));
+        sec.add(sectionHeader("BUILT FOR REAL USE", "Why Users Choose Expense Tracker", null, 0));
+        sec.add(Box.createVerticalStrut(32));
+
+        JPanel grid = new JPanel(new GridLayout(1, 3, 24, 0));
+        grid.setOpaque(false);
+        grid.add(whyCard("bolt", "Save Time", "Automate receipt entry and categorization with OCR."));
+        grid.add(whyCard("pie", "Stay Organized", "Get a clear view of your spending and budgets."));
+        grid.add(whyCard("shield", "Maintain Privacy", "Your data stays private, secure, and under your control."));
+        sec.add(grid);
+        return sec;
+    }
+
+    private JPanel whyCard(String icon, String title, String desc) {
+        CardPanel card = new CardPanel(14, C_WHITE, C_BORDER, false);
+        card.setHoverStyle(new Color(0xF2, 0xFA, 0xF5), C_MINT);
+        card.setLayout(new BorderLayout(18, 0));
+        card.setBorder(new EmptyBorder(26, 26, 26, 26));
+        JPanel iconWrap = new JPanel(new GridBagLayout());
+        iconWrap.setOpaque(false);
+        iconWrap.add(new IconBox(icon, 56, 26, true));
+        card.add(iconWrap, BorderLayout.WEST);
+
+        JPanel t = new JPanel();
+        t.setOpaque(false);
+        t.setLayout(new BoxLayout(t, BoxLayout.Y_AXIS));
+        t.add(left(label(title, Font.BOLD, 17.5f, C_INK)));
+        t.add(Box.createVerticalStrut(6));
+        t.add(left(new WrappedText(desc, font(Font.PLAIN, 14f), C_TEXT2, 1.6f, 0, SwingConstants.LEFT)));
+        card.add(t, BorderLayout.CENTER);
+        return card;
+    }
+
+    // ==========================================
+    // Final call to action
+    // ==========================================
+    private final class CtaPanel extends JPanel {
+        private static final int HEIGHT = 340;
+        private final SmoothImage background = new SmoothImage(loadImage("/images/cta-background.png"));
+        private final SmoothImage laptop = new SmoothImage(loadImage("/images/hero-laptop-preview.png"));
+        private final JPanel text = buildCtaText();
+
+        CtaPanel() {
+            setLayout(null);
+            setBackground(new Color(0xEA, 0xF3, 0xEE));
+            add(text);
+        }
+
+        @Override
+        public Dimension getPreferredSize() {
+            return new Dimension(1200, HEIGHT);
+        }
+
+        @Override
+        public Dimension getMaximumSize() {
+            return new Dimension(Integer.MAX_VALUE, HEIGHT);
+        }
+
+        @Override
+        public void doLayout() {
+            Dimension tp = text.getPreferredSize();
+            int x = Math.max(56, (int) (getWidth() * 0.06));
+            text.setBounds(x, (getHeight() - tp.height) / 2, tp.width, tp.height);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            int w = getWidth();
+            int h = getHeight();
+            drawCover(g2, background, w, h);
+            int lh = (int) (h * 0.86);
+            int lw = lh * laptop.width() / laptop.height();
+            int lx = (int) (w * 0.875) - lw;
+            int ly = h - lh - (int) (h * 0.07);
+            laptop.drawShadow(g2, lx, ly, lw, lh, 22, 24, 0.32f);
+            laptop.drawShadow(g2, lx, ly, lw, lh, 6, 8, 0.28f);
+            laptop.draw(g2, lx, ly, lw, lh);
+            g2.dispose();
+        }
+    }
+
+    private JPanel buildCtaText() {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.add(left(new TextLine("Ready to Take Control", font(Font.BOLD, 38f), C_INK, 1.15f, -0.02f)));
+        p.add(left(new TextLine("of Your Financial Life?", font(Font.BOLD, 38f), C_INK, 1.15f, -0.02f)));
+        p.add(Box.createVerticalStrut(12));
+        p.add(left(new WrappedText(
+                "Start tracking spending, scanning receipts with OCR, and making smarter financial decisions today.",
+                font(Font.PLAIN, 16f), C_TEXT2, 1.6f, 440, SwingConstants.LEFT)));
+        p.add(Box.createVerticalStrut(24));
+
+        p.add(left(row(14,
+                new ActionButton("Download for Windows  →", null, true, 230, 48, onSignUp),
+                new ActionButton("Log In", null, false, 130, 48, onLogin))));
+        p.add(Box.createVerticalStrut(16));
+        p.add(left(label("No credit card required   •   Offline demo mode available   •   Free to get started",
+                Font.PLAIN, 11.5f, C_TEXT3)));
+        return p;
+    }
+
+    // ==========================================
+    // Footer
+    // ==========================================
+    private JPanel buildFooter() {
+        JPanel footer = new JPanel(new BorderLayout(0, 22)) {
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
+        footer.setBackground(C_FOOTER);
+        footer.setBorder(new EmptyBorder(38, 64, 26, 64));
+
+        JPanel top = new JPanel(new GridBagLayout());
+        top.setOpaque(false);
+
+        JPanel names = new JPanel();
+        names.setOpaque(false);
+        names.setLayout(new BoxLayout(names, BoxLayout.Y_AXIS));
+        names.add(left(label("Expense Tracker", Font.BOLD, 17f, C_WHITE)));
+        names.add(Box.createVerticalStrut(2));
+        names.add(left(label("A private, offline-capable desktop app for smarter personal finance.",
+                Font.PLAIN, 11.5f, new Color(0x9D, 0xBB, 0xAF))));
+        JPanel brand = row(12,
+                new JLabel(new LogoIcon(new SmoothImage(loadImage("/images/app-logo.png")), 56, 42)), names);
+
+        JPanel links = new JPanel(new FlowLayout(FlowLayout.CENTER, 34, 0));
+        links.setOpaque(false);
+        links.add(footerLink("Features", () -> scrollTo(featuresAnchor)));
+        links.add(footerLink("How It Works", () -> scrollTo(howItWorksSection)));
+        links.add(footerLink("Security", () -> scrollTo(securitySection)));
+        links.add(footerLink("FAQ", () -> scrollTo(ctaSection)));
+
+        JPanel social = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 0));
+        social.setOpaque(false);
+        social.add(new SocialIcon("github"));
+        social.add(new SocialIcon("linkedin"));
+        social.add(new SocialIcon("twitter"));
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.weightx = 1;
+        c.anchor = GridBagConstraints.WEST;
+        top.add(brand, c);
+        c.gridx = 1;
+        c.weightx = 0;
+        c.anchor = GridBagConstraints.CENTER;
+        top.add(links, c);
+        c.gridx = 2;
+        c.weightx = 1;
+        c.anchor = GridBagConstraints.EAST;
+        top.add(social, c);
+        footer.add(top, BorderLayout.NORTH);
+
+        JPanel bottom = new JPanel(new BorderLayout());
+        bottom.setOpaque(false);
+        bottom.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(0x12, 0x45, 0x38)),
+                new EmptyBorder(16, 0, 0, 0)));
+        Color dim = new Color(0x86, 0xA8, 0x9A);
+        bottom.add(label("© 2026 Expense Tracker Desktop. All rights reserved.", Font.PLAIN, 11.5f, dim), BorderLayout.WEST);
+        bottom.add(label("Java 22  •  Swing  •  Supabase  •  Tess4J OCR  •  JFreeChart", Font.PLAIN, 11.5f, dim),
+                BorderLayout.EAST);
+        footer.add(bottom, BorderLayout.SOUTH);
+        return footer;
+    }
+
+    private JLabel footerLink(String text, Runnable action) {
+        Color base = new Color(0xD6, 0xE9, 0xE0);
+        JLabel l = label(text, Font.PLAIN, 14f, base);
+        l.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        l.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                action.run();
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                l.setForeground(C_MINT);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                l.setForeground(base);
+            }
+        });
+        return l;
+    }
+
+    // ==========================================
+    // Shared helpers
+    // ==========================================
+    private JPanel sectionHeader(String eyebrow, String title, String subtitle, int subtitleWidth) {
+        JPanel h = new JPanel();
+        h.setOpaque(false);
+        h.setLayout(new BoxLayout(h, BoxLayout.Y_AXIS));
+        if (eyebrow != null) {
+            h.add(centered(new TextLine(eyebrow, font(Font.BOLD, 12f), C_GREEN, 1.4f, 0.14f)));
+            h.add(Box.createVerticalStrut(10));
+        }
+        h.add(centered(new TextLine(title, font(Font.BOLD, 38f), C_INK, 1.2f, -0.02f)));
+        if (subtitle != null) {
+            h.add(Box.createVerticalStrut(12));
+            h.add(centered(new WrappedText(subtitle, font(Font.PLAIN, 16.5f), C_TEXT2, 1.6f, subtitleWidth,
+                    SwingConstants.CENTER)));
+        }
+        return h;
+    }
+
+    private static JLabel label(String text, int style, float size, Color color) {
+        JLabel l = new JLabel(text);
+        l.setFont(font(style, size));
+        l.setForeground(color);
+        return l;
+    }
+
+    private static JPanel row(int gap, Component... items) {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.X_AXIS));
+        for (int i = 0; i < items.length; i++) {
+            if (i > 0) {
+                p.add(Box.createHorizontalStrut(gap));
+            }
+            p.add(items[i]);
+        }
+        return p;
+    }
+
+    private static <T extends JComponent> T left(T c) {
+        c.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return c;
+    }
+
+    private static <T extends JComponent> T centered(T c) {
+        c.setAlignmentX(Component.CENTER_ALIGNMENT);
+        return c;
+    }
+
+    private static BufferedImage loadImage(String resourcePath) {
         URL resource = LandingPage.class.getResource(resourcePath);
         if (resource == null) {
             throw new IllegalStateException("Missing application resource: " + resourcePath);
@@ -319,926 +829,30 @@ public final class LandingPage extends JPanel {
         }
     }
 
-    // ==========================================
-    // 3. Enlarged & Improved Dashboard Preview Card
-    // ==========================================
-    private JPanel buildDashboardPreview() {
-        ShadowContainer shadow = new ShadowContainer();
-        shadow.setLayout(new BorderLayout());
-        shadow.setOpaque(false);
-        shadow.setBorder(new EmptyBorder(4, 4, 12, 4));
-
-        RoundPanel card = new RoundPanel(16, C_WHITE);
-        card.setLayout(new BorderLayout());
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(C_BORDER, 1),
-                BorderFactory.createEmptyBorder(18, 20, 18, 20)
-        ));
-        card.setPreferredSize(new Dimension(510, 480));
-        card.setMinimumSize(new Dimension(380, 420));
-
-        // Window Top Chrome: Dots + App Title + Synced Badge
-        JPanel chrome = new JPanel(new BorderLayout());
-        chrome.setOpaque(false);
-        chrome.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(0xEE, 0xF2, 0xF0)),
-                BorderFactory.createEmptyBorder(0, 0, 12, 0)
-        ));
-
-        JPanel dots = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        dots.setOpaque(false);
-        dots.add(miniDot(new Color(0xFF, 0x5F, 0x56))); // red
-        dots.add(miniDot(new Color(0xFF, 0xBD, 0x2E))); // yellow
-        dots.add(miniDot(new Color(0x27, 0xC9, 0x3F))); // green
-
-        JLabel title = new JLabel("Financial Dashboard");
-        title.setFont(fontB(13));
-        title.setForeground(C_PRI_TEXT);
-
-        JPanel status = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        status.setOpaque(false);
-        JLabel liveDot = new JLabel("●");
-        liveDot.setFont(fontB(10));
-        liveDot.setForeground(C_ACCENT);
-        JLabel liveText = new JLabel("Live Preview");
-        liveText.setFont(fontB(11));
-        liveText.setForeground(C_DEEP_GREEN);
-        status.add(liveDot);
-        status.add(liveText);
-
-        JPanel leftChrome = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-        leftChrome.setOpaque(false);
-        leftChrome.add(dots);
-        leftChrome.add(title);
-
-        chrome.add(leftChrome, BorderLayout.WEST);
-        chrome.add(status, BorderLayout.EAST);
-        card.add(chrome, BorderLayout.NORTH);
-
-        // Body: 3 Metric Cards + MiniChart + Category Breakdown + Transactions
-        JPanel body = new JPanel();
-        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-        body.setOpaque(false);
-        body.setBorder(new EmptyBorder(14, 0, 0, 0));
-
-        // 3 Key Metrics Row
-        JPanel statsRow = new JPanel(new GridLayout(1, 3, 10, 0));
-        statsRow.setOpaque(false);
-        statsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 74));
-        statsRow.add(previewStatCard("TOTAL SPENT", "$3,842.50", "+4.2%", C_DARK_TEAL));
-        statsRow.add(previewStatCard("THIS MONTH", "$1,248.80", "Budget: $2k", C_DEEP_GREEN));
-        statsRow.add(previewStatCard("RECEIPTS", "28 Scanned", "100% OCR", C_ACCENT));
-        body.add(statsRow);
-        body.add(Box.createVerticalStrut(12));
-
-        // Monthly Spending Trend Chart
-        RoundPanel chartBox = new RoundPanel(10, C_SURFACE);
-        chartBox.setLayout(new BorderLayout(0, 6));
-        chartBox.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(C_BORDER, 1),
-                BorderFactory.createEmptyBorder(10, 14, 10, 14)
-        ));
-        chartBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
-
-        JPanel chartHdr = new JPanel(new BorderLayout());
-        chartHdr.setOpaque(false);
-        JLabel chartTitle = new JLabel("Monthly Spending Trend");
-        chartTitle.setFont(fontB(11));
-        chartTitle.setForeground(C_PRI_TEXT);
-
-        JLabel chartSub = new JLabel("Last 7 Months  •  Target On Track");
-        chartSub.setFont(fontP(10));
-        chartSub.setForeground(C_DEEP_GREEN);
-        chartHdr.add(chartTitle, BorderLayout.WEST);
-        chartHdr.add(chartSub, BorderLayout.EAST);
-        chartBox.add(chartHdr, BorderLayout.NORTH);
-
-        MiniBarChart barChart = new MiniBarChart();
-        barChart.setPreferredSize(new Dimension(0, 66));
-        chartBox.add(barChart, BorderLayout.CENTER);
-        body.add(chartBox);
-        body.add(Box.createVerticalStrut(12));
-
-        // Top Categories Chips
-        JPanel catSection = new JPanel();
-        catSection.setLayout(new BoxLayout(catSection, BoxLayout.Y_AXIS));
-        catSection.setOpaque(false);
-        catSection.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-
-        JPanel catRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        catRow.setOpaque(false);
-        catRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        catRow.add(catChip("Food & Dining", "42%", new Color(0xF5, 0x9E, 0x0B)));
-        catRow.add(catChip("Tech & Office", "28%", new Color(0x63, 0x66, 0xF1)));
-        catRow.add(catChip("Travel", "18%", new Color(0x18, 0xC7, 0x8A)));
-        catRow.add(catChip("Utilities", "12%", new Color(0x64, 0x74, 0x8B)));
-        catSection.add(catRow);
-        body.add(catSection);
-        body.add(Box.createVerticalStrut(10));
-
-        // Recent Transactions Header + 3 Real Swing Rows
-        JPanel txnHeader = new JPanel(new BorderLayout());
-        txnHeader.setOpaque(false);
-        txnHeader.setMaximumSize(new Dimension(Integer.MAX_VALUE, 18));
-        JLabel txnTitle = new JLabel("Recent Transactions");
-        txnTitle.setFont(fontB(11));
-        txnTitle.setForeground(C_SEC_TEXT);
-        JLabel txnSub = new JLabel("Instant OCR Synced");
-        txnSub.setFont(fontP(10));
-        txnSub.setForeground(C_MUTED_TEXT);
-        txnHeader.add(txnTitle, BorderLayout.WEST);
-        txnHeader.add(txnSub, BorderLayout.EAST);
-        body.add(txnHeader);
-        body.add(Box.createVerticalStrut(6));
-
-        body.add(txnRow("Starbucks Reserve", "Food & Dining", "-$14.80", "OCR Scanned", new Color(0xF5, 0x9E, 0x0B)));
-        body.add(Box.createVerticalStrut(5));
-        body.add(txnRow("Apple Store NYC", "Hardware & Tech", "-$1,299.00", "OCR Scanned", new Color(0x63, 0x66, 0xF1)));
-        body.add(Box.createVerticalStrut(5));
-        body.add(txnRow("Metro Transit Pass", "Travel & Transit", "-$85.00", "Manual Entry", new Color(0x18, 0xC7, 0x8A)));
-
-        card.add(body, BorderLayout.CENTER);
-        shadow.add(card, BorderLayout.CENTER);
-        return shadow;
+    private static void drawCover(Graphics2D g2, SmoothImage image, int w, int h) {
+        double scale = Math.max(w / (double) image.width(), h / (double) image.height());
+        int dw = (int) Math.ceil(image.width() * scale);
+        int dh = (int) Math.ceil(image.height() * scale);
+        image.draw(g2, (w - dw) / 2, h - dh, dw, dh);
     }
 
-    private JPanel miniDot(Color color) {
-        JPanel dot = new JPanel() {
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(color);
-                g2.fillOval(0, 0, 9, 9);
-                g2.dispose();
-            }
-        };
-        dot.setOpaque(false);
-        dot.setPreferredSize(new Dimension(9, 9));
-        return dot;
+    private static void quality(Graphics2D g2) {
+        UiKit.quality(g2);
     }
 
-    private JPanel previewStatCard(String label, String value, String badge, Color valueColor) {
-        RoundPanel p = new RoundPanel(8, C_SURFACE);
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(C_BORDER, 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
-
-        JLabel l = new JLabel(label);
-        l.setFont(fontB(9));
-        l.setForeground(C_MUTED_TEXT);
-
-        JLabel v = new JLabel(value);
-        v.setFont(fontB(13));
-        v.setForeground(valueColor);
-
-        JLabel b = new JLabel(badge);
-        b.setFont(fontM(9));
-        b.setForeground(C_DEEP_GREEN);
-
-        p.add(l);
-        p.add(Box.createVerticalStrut(2));
-        p.add(v);
-        p.add(Box.createVerticalStrut(1));
-        p.add(b);
-        return p;
-    }
-
-    private JPanel catChip(String name, String pct, Color color) {
-        JPanel chip = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 2));
-        chip.setBackground(new Color(color.getRed(), color.getGreen(), color.getBlue(), 20));
-        chip.setBorder(BorderFactory.createLineBorder(new Color(color.getRed(), color.getGreen(), color.getBlue(), 65), 1, true));
-
-        JPanel dot = new JPanel() {
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(color);
-                g2.fillOval(0, 0, 6, 6);
-                g2.dispose();
-            }
-        };
-        dot.setOpaque(false);
-        dot.setPreferredSize(new Dimension(6, 6));
-
-        JLabel lbl = new JLabel(name + " " + pct);
-        lbl.setFont(fontB(9));
-        lbl.setForeground(C_PRI_TEXT);
-
-        chip.add(dot);
-        chip.add(lbl);
-        return chip;
-    }
-
-    private JPanel txnRow(String merchant, String category, String amount, String tag, Color categoryDot) {
-        RoundPanel row = new RoundPanel(8, C_WHITE);
-        row.setLayout(new BorderLayout());
-        row.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(C_BORDER, 1),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)
-        ));
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        left.setOpaque(false);
-
-        JPanel dot = new JPanel() {
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(categoryDot);
-                g2.fillOval(0, 0, 8, 8);
-                g2.dispose();
-            }
-        };
-        dot.setOpaque(false);
-        dot.setPreferredSize(new Dimension(8, 8));
-
-        JLabel m = new JLabel(merchant);
-        m.setFont(fontB(11));
-        m.setForeground(C_PRI_TEXT);
-
-        JLabel c = new JLabel("• " + category);
-        c.setFont(fontP(10));
-        c.setForeground(C_SEC_TEXT);
-
-        left.add(dot);
-        left.add(m);
-        left.add(c);
-
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        right.setOpaque(false);
-
-        JLabel a = new JLabel(amount);
-        a.setFont(fontB(11));
-        a.setForeground(C_DARK_TEAL);
-
-        JLabel t = new JLabel(tag);
-        t.setFont(fontP(9));
-        t.setForeground(C_DEEP_GREEN);
-        t.setOpaque(true);
-        t.setBackground(C_BADGE_BG);
-        t.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(C_BADGE_BD, 1, true),
-                BorderFactory.createEmptyBorder(1, 6, 1, 6)
-        ));
-
-        right.add(a);
-        right.add(t);
-
-        row.add(left, BorderLayout.WEST);
-        row.add(right, BorderLayout.EAST);
-        return row;
-    }
-
-    // ==========================================
-    // 4. Feature Cards: Clean 3-Column / 2-Row Grid
-    // ==========================================
-    private JPanel buildFeatures() {
-        featuresSection = new JPanel(new BorderLayout());
-        featuresSection.setBackground(C_WHITE);
-        featuresSection.setBorder(new EmptyBorder(64, 48, 64, 48));
-
-        // Section Title & Subheading
-        JPanel hdr = new JPanel();
-        hdr.setLayout(new BoxLayout(hdr, BoxLayout.Y_AXIS));
-        hdr.setOpaque(false);
-
-        JLabel badge = new JLabel("CAPABILITIES");
-        badge.setFont(fontB(11));
-        badge.setForeground(C_DEEP_GREEN);
-        badge.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel t1 = new JLabel("Everything You Need to Master Your Money", SwingConstants.CENTER);
-        t1.setFont(fontB(32));
-        t1.setForeground(C_DARK_TEAL);
-        t1.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel sub = new JLabel("From intelligent optical receipt scanning to executive PDF reporting, all in one place.", SwingConstants.CENTER);
-        sub.setFont(fontP(15));
-        sub.setForeground(C_SEC_TEXT);
-        sub.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        hdr.add(badge);
-        hdr.add(Box.createVerticalStrut(6));
-        hdr.add(t1);
-        hdr.add(Box.createVerticalStrut(8));
-        hdr.add(sub);
-        featuresSection.add(hdr, BorderLayout.NORTH);
-
-        // 3-Column x 2-Row Grid
-        JPanel grid = new JPanel(new GridLayout(2, 3, 20, 20));
-        grid.setOpaque(false);
-        grid.setBorder(new EmptyBorder(36, 0, 0, 0));
-
-        grid.add(buildFeatureCard("ocr", "Receipt OCR Scanning",
-                "Scan or drop receipts and invoices. Built-in Tess4J automatically extracts merchant names, dates, and amounts into editable fields."));
-        grid.add(buildFeatureCard("insights", "Smart Visual Insights",
-                "Understand where every dollar goes with interactive JFreeChart breakdowns across spending categories, payment methods, and timelines."));
-        grid.add(buildFeatureCard("reports", "Executive PDF & CSV Reports",
-                "Generate comprehensive, structured financial summaries. One-click export to PDF or CSV ready for accountants and audits."));
-        grid.add(buildFeatureCard("search", "Deep Search & Filters",
-                "Locate any transaction in milliseconds. Filter by category, payment method, date intervals, receipt attachment, and custom notes."));
-        grid.add(buildFeatureCard("export", "Instant Data Mobility",
-                "Keep complete ownership of your records. Export your entire transaction archive or filtered sets whenever you need them."));
-        grid.add(buildFeatureCard("security", "Row-Level Security & Privacy",
-                "Backed by Supabase Auth with strict Row-Level Security policies. Your transaction data is isolated, encrypted, and accessible only to you."));
-
-        featuresSection.add(grid, BorderLayout.CENTER);
-        return featuresSection;
-    }
-
-    private JPanel buildFeatureCard(String iconType, String title, String desc) {
-        RoundPanel card = new RoundPanel(14, C_SURFACE);
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(C_BORDER, 1),
-                BorderFactory.createEmptyBorder(22, 22, 22, 22)
-        ));
-
-        // Icon Box with Vector Graphic
-        JPanel iconBox = new JPanel(new GridBagLayout()) {
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(C_ICON_BG);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
-                g2.setColor(C_ICON_BD);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        iconBox.setOpaque(false);
-        iconBox.setPreferredSize(new Dimension(46, 46));
-        iconBox.setMaximumSize(new Dimension(46, 46));
-        iconBox.add(new VectorIcon(iconType, 22, C_DEEP_GREEN));
-
-        JPanel iconRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        iconRow.setOpaque(false);
-        iconRow.add(iconBox);
-        iconRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel tl = new JLabel(title);
-        tl.setFont(fontB(16));
-        tl.setForeground(C_DARK_TEAL);
-        tl.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel dl = new JLabel("<html><body style='line-height:1.45; color:#5A6B64; font-size:12px;'>" + desc + "</body></html>");
-        dl.setFont(fontP(13));
-        dl.setForeground(C_SEC_TEXT);
-        dl.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        card.add(iconRow);
-        card.add(Box.createVerticalStrut(14));
-        card.add(tl);
-        card.add(Box.createVerticalStrut(8));
-        card.add(dl);
-
-        // Hover Effect
-        card.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) {
-                card.setBackground(new Color(0xF2, 0xFA, 0xF5));
-                card.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(C_ACCENT, 1),
-                        BorderFactory.createEmptyBorder(22, 22, 22, 22)
-                ));
-            }
-            public void mouseExited(MouseEvent e) {
-                card.setBackground(C_SURFACE);
-                card.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(C_BORDER, 1),
-                        BorderFactory.createEmptyBorder(22, 22, 22, 22)
-                ));
-            }
-        });
-
-        return card;
-    }
-
-    // ==========================================
-    // 5. "How It Works" Section
-    // ==========================================
-    private JPanel buildHowItWorks() {
-        howItWorksSection = new JPanel(new BorderLayout());
-        howItWorksSection.setBackground(C_BG);
-        howItWorksSection.setBorder(new EmptyBorder(64, 48, 64, 48));
-
-        JPanel hdr = new JPanel();
-        hdr.setLayout(new BoxLayout(hdr, BoxLayout.Y_AXIS));
-        hdr.setOpaque(false);
-
-        JLabel badge = new JLabel("SIMPLE WORKFLOW");
-        badge.setFont(fontB(11));
-        badge.setForeground(C_DEEP_GREEN);
-        badge.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel t = new JLabel("How Expense Tracker Works in 3 Simple Steps", SwingConstants.CENTER);
-        t.setFont(fontB(32));
-        t.setForeground(C_DARK_TEAL);
-        t.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel s = new JLabel("Effortlessly transition from scattered paper receipts to comprehensive financial control.", SwingConstants.CENTER);
-        s.setFont(fontP(15));
-        s.setForeground(C_SEC_TEXT);
-        s.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        hdr.add(badge);
-        hdr.add(Box.createVerticalStrut(6));
-        hdr.add(t);
-        hdr.add(Box.createVerticalStrut(8));
-        hdr.add(s);
-        howItWorksSection.add(hdr, BorderLayout.NORTH);
-
-        StepsContainer stepsContainer = new StepsContainer();
-        stepsContainer.setOpaque(false);
-        stepsContainer.setBorder(new EmptyBorder(38, 0, 0, 0));
-        howItWorksSection.add(stepsContainer, BorderLayout.CENTER);
-
-        return howItWorksSection;
-    }
-
-    private class StepsContainer extends JPanel {
-        private final FloatingStepCard first = stepCard("01", "ocr", "Record & Scan",
-                "Add expenses manually in seconds or attach physical receipts for instant OCR extraction.");
-        private final FloatingStepCard second = stepCard("02", "search", "Categorize & Track",
-                "Organize transactions by category, payment method, timestamp, and notes.");
-        private final FloatingStepCard third = stepCard("03", "insights", "Understand & Export",
-                "Analyze spending with charts, maintain budgets, and generate PDF summaries.");
-
-        StepsContainer() {
-            setLayout(null); // Only this visual canvas positions its three floating cards.
-            setPreferredSize(new Dimension(980, 540));
-            setMinimumSize(new Dimension(0, 540));
-            add(first);
-            add(second);
-            add(third);
+    private void scrollTo(JComponent target) {
+        if (target == null || scrollPane == null) {
+            return;
         }
-
-        @Override
-        public void doLayout() {
-            int w = getWidth();
-            if (w < 680) {
-                int cardW = Math.max(220, Math.min(360, w - 28));
-                int x = Math.max(14, (w - cardW) / 2);
-                first.setBounds(x, 10, cardW, 156);
-                second.setBounds(x, 184, cardW, 156);
-                third.setBounds(x, 358, cardW, 156);
-                return;
-            }
-
-            int cardW = Math.max(240, Math.min(366, (int) (w * 0.205)));
-            int cardH = 182;
-            first.setBounds(Math.max(18, (int) (w * 0.075)), 18, cardW, cardH);
-            second.setBounds(Math.min(w - cardW - 18, (int) (w * 0.55)), 123, cardW, cardH);
-            third.setBounds(Math.min(w - cardW - 18, (int) (w * 0.27)), 332, cardW, cardH);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-            // Very quiet editorial background details.
-            g2.setColor(new Color(0x18, 0xC7, 0x8A, 12));
-            for (int x = 28; x < getWidth(); x += 42) {
-                for (int y = 14; y < getHeight(); y += 42) g2.fillOval(x, y, 2, 2);
-            }
-            g2.setStroke(new BasicStroke(1f));
-            g2.setColor(new Color(0x06, 0x3B, 0x2E, 13));
-            for (int x = 24; x < getWidth(); x += 95) g2.drawLine(x, 0, x, getHeight() - 10);
-            for (int y = 32; y < getHeight(); y += 88) g2.drawLine(0, y, getWidth() - 24, y);
-            g2.setColor(new Color(0x06, 0x3B, 0x2E, 10));
-            g2.drawOval(getWidth() - 170, 12, 132, 132);
-            g2.drawOval(20, getHeight() - 126, 96, 96);
-            g2.drawLine(26, getHeight() - 26, getWidth() - 26, getHeight() - 26);
-
-            Rectangle a = first.getBounds();
-            Rectangle b = second.getBounds();
-            Rectangle c = third.getBounds();
-            g2.setColor(new Color(0x18, 0xC7, 0x8A, 130));
-            g2.setStroke(new BasicStroke(1.7f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0, new float[]{4, 7}, 0));
-            Path2D journey = new Path2D.Float();
-            if (getWidth() < 680) {
-                int cx = getWidth() / 2;
-                journey.moveTo(cx, a.y + a.height);
-                journey.curveTo(cx + 42, a.y + a.height + 24, cx - 42, b.y - 24, cx, b.y);
-                journey.moveTo(cx, b.y + b.height);
-                journey.curveTo(cx - 42, b.y + b.height + 24, cx + 42, c.y - 24, cx, c.y);
-            } else {
-                journey.moveTo(a.x + a.width, a.y + a.height / 2);
-                journey.curveTo(a.x + a.width + 85, a.y + a.height / 2 - 28,
-                        b.x - 72, b.y + b.height / 2 - 18, b.x, b.y + b.height / 2);
-                journey.moveTo(b.x + (b.width * 2) / 5, b.y + b.height);
-                journey.curveTo(b.x + (b.width * 2) / 5 - 8, b.y + b.height + 48,
-                        c.x + (c.width * 4) / 5 + 34, c.y - 38, c.x + (c.width * 4) / 5, c.y);
-            }
-            g2.draw(journey);
-            g2.dispose();
-        }
-    }
-
-    private FloatingStepCard stepCard(String stepNum, String iconType, String title, String desc) {
-        return new FloatingStepCard(stepNum, iconType, title, desc);
-    }
-
-    private final class FloatingStepCard extends JPanel {
-        FloatingStepCard(String stepNum, String iconType, String title, String desc) {
-            setOpaque(false);
-            setLayout(new BorderLayout(0, 12));
-            setBorder(new EmptyBorder(18, 20, 17, 20));
-
-            JPanel topRow = new JPanel(new BorderLayout());
-            topRow.setOpaque(false);
-            JLabel number = new JLabel(stepNum);
-            number.setFont(fontB(10));
-            number.setForeground(C_DEEP_GREEN);
-            number.setOpaque(true);
-            number.setBackground(C_BADGE_BG);
-            number.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(C_BADGE_BD, 1, true),
-                    BorderFactory.createEmptyBorder(4, 9, 4, 9)));
-            topRow.add(number, BorderLayout.WEST);
-            topRow.add(new VectorIcon(iconType, 21, C_DEEP_GREEN), BorderLayout.EAST);
-
-            JPanel copy = new JPanel(new BorderLayout(0, 6));
-            copy.setOpaque(false);
-            JLabel heading = new JLabel(title);
-            heading.setFont(fontB(17));
-            heading.setForeground(C_DARK_TEAL);
-            JTextArea description = new JTextArea(desc);
-            description.setFont(fontP(12));
-            description.setForeground(C_SEC_TEXT);
-            description.setLineWrap(true);
-            description.setWrapStyleWord(true);
-            description.setEditable(false);
-            description.setFocusable(false);
-            description.setOpaque(false);
-            description.setBorder(BorderFactory.createEmptyBorder());
-            copy.add(heading, BorderLayout.NORTH);
-            copy.add(description, BorderLayout.CENTER);
-
-            add(topRow, BorderLayout.NORTH);
-            add(copy, BorderLayout.CENTER);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            for (int i = 5; i >= 1; i--) {
-                g2.setColor(new Color(0, 0, 0, 3 + i));
-                g2.fillRoundRect(3 + i, 5 + i, getWidth() - 6 - (i * 2), getHeight() - 8, 18, 18);
-            }
-            g2.setColor(C_WHITE);
-            g2.fillRoundRect(1, 1, getWidth() - 3, getHeight() - 5, 16, 16);
-            g2.setColor(C_BORDER);
-            g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 5, 16, 16);
-            g2.dispose();
-            super.paintComponent(g);
-        }
+        Component view = scrollPane.getViewport().getView();
+        int max = Math.max(0, view.getHeight() - scrollPane.getViewport().getHeight());
+        int y = javax.swing.SwingUtilities.convertPoint(target, 0, 0, view).y - (target == featuresAnchor ? 40 : 0);
+        scrollPane.getViewport().setViewPosition(new Point(0, Math.max(0, Math.min(y, max))));
     }
 
     // ==========================================
-    // 6. Enterprise Security Banner Section
+    // Layout / text components
     // ==========================================
-    private JPanel buildSecurity() {
-        securitySection = new JPanel(new BorderLayout());
-        securitySection.setBackground(C_WHITE);
-        securitySection.setBorder(new EmptyBorder(56, 48, 56, 48));
-
-        RoundPanel banner = new RoundPanel(18, C_DARK_TEAL);
-        banner.setLayout(new GridBagLayout());
-        banner.setBorder(new EmptyBorder(40, 44, 40, 44));
-
-        GridBagConstraints g = new GridBagConstraints();
-        g.fill = GridBagConstraints.BOTH;
-        g.weighty = 1.0;
-
-        // Left Side: Prominent Vector Shield Illustration
-        JPanel shieldWrap = new JPanel(new GridBagLayout());
-        shieldWrap.setOpaque(false);
-        VectorIcon largeShield = new VectorIcon("security_large", 80, C_ACCENT);
-        shieldWrap.add(largeShield);
-
-        g.gridx = 0;
-        g.gridy = 0;
-        g.weightx = 0.18;
-        g.insets = new Insets(0, 0, 0, 28);
-        banner.add(shieldWrap, g);
-
-        // Right Side: Content + Trust Bullet Points
-        JPanel content = new JPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setOpaque(false);
-
-        JLabel badge = new JLabel("ENTERPRISE-GRADE PRIVACY & PROTECTION");
-        badge.setFont(fontB(11));
-        badge.setForeground(C_ACCENT);
-        badge.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel st = new JLabel("Your Financial Data Stays 100% Yours");
-        st.setFont(fontB(24));
-        st.setForeground(C_WHITE);
-        st.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel sd = new JLabel("<html><body style='color:#D1E7DD; line-height:1.55; font-size:13px;'>"
-                + "Every record, receipt scan, and category is safeguarded with Supabase Row-Level Security (RLS). "
-                + "Only your authenticated account can read or mutate your transactions. "
-                + "Passwords, keys, and session tokens are securely handled and never exposed."
-                + "</body></html>");
-        sd.setFont(fontP(13));
-        sd.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JPanel checks = new JPanel(new FlowLayout(FlowLayout.LEFT, 24, 0));
-        checks.setOpaque(false);
-        checks.setAlignmentX(Component.LEFT_ALIGNMENT);
-        checks.add(secCheckItem("Row-Level Security (RLS) Isolation"));
-        checks.add(secCheckItem("Zero-Telemetry Guarantee"));
-        checks.add(secCheckItem("Local Offline Demo Mode"));
-
-        content.add(badge);
-        content.add(Box.createVerticalStrut(8));
-        content.add(st);
-        content.add(Box.createVerticalStrut(10));
-        content.add(sd);
-        content.add(Box.createVerticalStrut(20));
-        content.add(checks);
-
-        g.gridx = 1;
-        g.weightx = 0.82;
-        g.insets = new Insets(0, 0, 0, 0);
-        banner.add(content, g);
-
-        securitySection.add(banner, BorderLayout.CENTER);
-        return securitySection;
-    }
-
-    private JPanel secCheckItem(String text) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        p.setOpaque(false);
-        VectorIcon check = new VectorIcon("check", 14, C_ACCENT);
-        JLabel lbl = new JLabel(text);
-        lbl.setFont(fontB(12));
-        lbl.setForeground(new Color(0xE2, 0xF5, 0xED));
-        p.add(check);
-        p.add(lbl);
-        return p;
-    }
-
-    // ==========================================
-    // 7. Final Call to Action (CTA) Section
-    // ==========================================
-    private JPanel buildFinalCta() {
-        JPanel sec = new JPanel(new BorderLayout());
-        sec.setBackground(C_BG);
-        sec.setBorder(new EmptyBorder(64, 48, 64, 48));
-
-        RoundPanel card = new RoundPanel(16, C_WHITE);
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(C_BORDER, 1),
-                BorderFactory.createEmptyBorder(48, 36, 48, 36)
-        ));
-
-        JLabel t1 = new JLabel("Ready to Take Control of Your Financial Life?", SwingConstants.CENTER);
-        t1.setFont(fontB(30));
-        t1.setForeground(C_DARK_TEAL);
-        t1.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel t2 = new JLabel("Start tracking spending, scanning receipts with OCR, and saving smarter today.", SwingConstants.CENTER);
-        t2.setFont(fontP(15));
-        t2.setForeground(C_SEC_TEXT);
-        t2.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 16, 0));
-        btnRow.setOpaque(false);
-        btnRow.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JButton su = pillBtn("Sign Up  →", onSignUp, true);
-        su.setPreferredSize(new Dimension(160, 48));
-        su.setFont(fontB(14));
-
-        JButton li = outlineBtn("Log In", onLogin);
-        li.setPreferredSize(new Dimension(126, 48));
-        li.setFont(fontB(14));
-
-        btnRow.add(su);
-        btnRow.add(li);
-
-        JLabel subNote = new JLabel("No credit card required  •  Offline Demo Mode available instantly", SwingConstants.CENTER);
-        subNote.setFont(fontP(12));
-        subNote.setForeground(C_MUTED_TEXT);
-        subNote.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        card.add(t1);
-        card.add(Box.createVerticalStrut(10));
-        card.add(t2);
-        card.add(Box.createVerticalStrut(28));
-        card.add(btnRow);
-        card.add(Box.createVerticalStrut(18));
-        card.add(subNote);
-
-        sec.add(card, BorderLayout.CENTER);
-        return sec;
-    }
-
-    // ==========================================
-    // 8. Footer Section
-    // ==========================================
-    private JPanel buildFooter() {
-        JPanel footer = new JPanel(new BorderLayout(0, 16));
-        footer.setBackground(C_FOOTER_BG);
-        footer.setBorder(new EmptyBorder(38, 48, 30, 48));
-
-        // Top Row: Brand & Navigation Jump Links
-        JPanel top = new JPanel(new BorderLayout());
-        top.setOpaque(false);
-
-        JPanel brand = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        brand.setOpaque(false);
-        JLabel footerLogo = new JLabel(new javax.swing.ImageIcon(
-                loadImage("/images/app-logo.png").getScaledInstance(64, 48, Image.SCALE_SMOOTH)));
-        footerLogo.setPreferredSize(new Dimension(68, 52));
-        JLabel name = new JLabel("Expense Tracker Desktop");
-        name.setFont(fontB(16));
-        name.setForeground(C_WHITE);
-        brand.add(footerLogo);
-        brand.add(name);
-
-        JPanel links = new JPanel(new FlowLayout(FlowLayout.RIGHT, 24, 0));
-        links.setOpaque(false);
-        links.add(footerLink("Features", () -> scrollTo(featuresSection)));
-        links.add(footerLink("How It Works", () -> scrollTo(howItWorksSection)));
-        links.add(footerLink("Security", () -> scrollTo(securitySection)));
-        links.add(footerLink("Back to Top ↑", () -> scrollToTop()));
-
-        top.add(brand, BorderLayout.WEST);
-        top.add(links, BorderLayout.EAST);
-        footer.add(top, BorderLayout.NORTH);
-
-        // Divider
-        JPanel divider = new JPanel();
-        divider.setBackground(new Color(0x0A, 0x4E, 0x3D));
-        divider.setPreferredSize(new Dimension(1, 1));
-        divider.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        footer.add(divider, BorderLayout.CENTER);
-
-        // Bottom Row: Copyright & Technology Badge
-        JPanel bottom = new JPanel(new BorderLayout());
-        bottom.setOpaque(false);
-
-        JLabel copyright = new JLabel("© 2026 Expense Tracker Desktop • Production Ready");
-        copyright.setFont(fontP(12));
-        copyright.setForeground(new Color(0x8A, 0xA6, 0x9B));
-
-        JLabel tech = new JLabel("Java 22  •  Swing  •  FlatLaf  •  Supabase  •  Tess4J OCR  •  JFreeChart");
-        tech.setFont(fontP(12));
-        tech.setForeground(new Color(0x8A, 0xA6, 0x9B));
-
-        bottom.add(copyright, BorderLayout.WEST);
-        bottom.add(tech, BorderLayout.EAST);
-        footer.add(bottom, BorderLayout.SOUTH);
-
-        return footer;
-    }
-
-    private JLabel footerLink(String text, Runnable action) {
-        JLabel l = new JLabel(text);
-        l.setFont(fontP(13));
-        l.setForeground(new Color(0xD1, 0xE7, 0xDD));
-        l.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        l.addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) { action.run(); }
-            public void mouseEntered(MouseEvent e) { l.setForeground(C_ACCENT); }
-            public void mouseExited(MouseEvent e) { l.setForeground(new Color(0xD1, 0xE7, 0xDD)); }
-        });
-        return l;
-    }
-
-    // ==========================================
-    // UI Helpers: Buttons, Scrolling, Custom Panels
-    // ==========================================
-    private JButton pillBtn(String text, Runnable action, boolean primary) {
-        JButton btn = new JButton(text) {
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getBackground());
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 24, 24);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        btn.setFont(fontB(13));
-        btn.setForeground(C_WHITE);
-        btn.setBackground(primary ? C_DEEP_GREEN : C_DARK_TEAL);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setOpaque(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.setPreferredSize(new Dimension(130, 40));
-        btn.addActionListener(e -> action.run());
-
-        Color base = primary ? C_DEEP_GREEN : C_DARK_TEAL;
-        Color hov = primary ? C_DARK_TEAL : C_DEEP_GREEN;
-
-        btn.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { btn.setBackground(hov); btn.repaint(); }
-            public void mouseExited(MouseEvent e) { btn.setBackground(base); btn.repaint(); }
-        });
-        return btn;
-    }
-
-    private JButton outlineBtn(String text, Runnable action) {
-        JButton btn = new JButton(text) {
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getBackground());
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 24, 24);
-                g2.setColor(C_DEEP_GREEN);
-                g2.setStroke(new BasicStroke(1.5f));
-                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 22, 22);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        btn.setFont(fontB(13));
-        btn.setForeground(C_DARK_TEAL);
-        btn.setBackground(C_WHITE);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setOpaque(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.setPreferredSize(new Dimension(110, 40));
-        btn.addActionListener(e -> action.run());
-        btn.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { btn.setBackground(C_BADGE_BG); btn.repaint(); }
-            public void mouseExited(MouseEvent e) { btn.setBackground(C_WHITE); btn.repaint(); }
-        });
-        return btn;
-    }
-
-    private JButton textBtn(String text, Runnable action) {
-        JButton btn = new JButton(text);
-        btn.setFont(fontB(13));
-        btn.setForeground(C_DARK_TEAL);
-        btn.setBackground(C_WHITE);
-        btn.setFocusPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.setBorder(BorderFactory.createEmptyBorder(6, 14, 6, 14));
-        btn.addActionListener(e -> action.run());
-        btn.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { btn.setForeground(C_ACCENT_HOV); }
-            public void mouseExited(MouseEvent e) { btn.setForeground(C_DARK_TEAL); }
-        });
-        return btn;
-    }
-
-    private JButton navLink(String label, Runnable action) {
-        JButton btn = new JButton(label);
-        btn.setFont(fontP(14));
-        btn.setForeground(C_PRI_TEXT);
-        btn.setBackground(C_WHITE);
-        btn.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
-        btn.setFocusPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addActionListener(e -> action.run());
-        btn.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { btn.setForeground(C_DEEP_GREEN); }
-            public void mouseExited(MouseEvent e) { btn.setForeground(C_PRI_TEXT); }
-        });
-        return btn;
-    }
-
-    private void scrollTo(JComponent c) {
-        if (c != null) {
-            c.scrollRectToVisible(new Rectangle(0, 0, c.getWidth(), c.getHeight()));
-        }
-    }
-
-    private void scrollToTop() {
-        if (scrollPane != null && scrollPane.getVerticalScrollBar() != null) {
-            scrollPane.getVerticalScrollBar().setValue(0);
-        }
-    }
-
-    // ==========================================
-    // Inner Classes: ScrollablePanel, RoundPanel, MiniBarChart, VectorIcon, ShadowContainer
-    // ==========================================
-
-    /**
-     * Scrollable content panel that strictly tracks viewport width.
-     * Prevents any horizontal scrollbar from appearing under any screen resolution.
-     */
     private static final class ScrollableContentPanel extends JPanel implements Scrollable {
         @Override
         public Dimension getPreferredScrollableViewportSize() {
@@ -1257,7 +871,7 @@ public final class LandingPage extends JPanel {
 
         @Override
         public boolean getScrollableTracksViewportWidth() {
-            return true; // Crucial: Locks width to viewport width!
+            return true;
         }
 
         @Override
@@ -1266,331 +880,751 @@ public final class LandingPage extends JPanel {
         }
     }
 
-    /** Draws a classpath image centered and proportionally at desktop-friendly hero dimensions. */
-    private static final class ResponsiveImagePanel extends JPanel {
-        private static final int MAX_IMAGE_WIDTH = 650;
-        private final Image image;
+    /** Full-width section with a flat or vertical-gradient background that never stretches vertically. */
+    private static class SectionPanel extends JPanel {
+        private final Color top;
+        private final Color bottom;
 
-        ResponsiveImagePanel(Image image) {
-            this.image = image;
-            setOpaque(false);
-            setPreferredSize(new Dimension(620, 414));
-            setMinimumSize(new Dimension(360, 240));
+        SectionPanel(Color top, Color bottom) {
+            this.top = top;
+            this.bottom = bottom;
+            setOpaque(true);
+            setBackground(top);
         }
 
         @Override
-        protected void paintComponent(Graphics graphics) {
-            super.paintComponent(graphics);
-            int availableWidth = Math.max(1, getWidth() - 8);
-            int availableHeight = Math.max(1, getHeight() - 8);
-            double scale = Math.min(Math.min(availableWidth, MAX_IMAGE_WIDTH) / (double) image.getWidth(this),
-                    availableHeight / (double) image.getHeight(this));
-            int width = Math.max(1, (int) Math.round(image.getWidth(this) * scale));
-            int height = Math.max(1, (int) Math.round(image.getHeight(this) * scale));
-            int x = (getWidth() - width) / 2;
-            int y = (getHeight() - height) / 2;
-
-            Graphics2D g2 = (Graphics2D) graphics.create();
-            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-            g2.drawImage(image, x, y, width, height, this);
-            g2.dispose();
-        }
-    }
-
-    /**
-     * Smooth rounded-corner panel with anti-aliasing.
-     */
-    private static final class RoundPanel extends JPanel {
-        private final int radius;
-        private Color bg;
-
-        RoundPanel(int radius, Color bg) {
-            this.radius = radius;
-            this.bg = bg;
-            setOpaque(false);
-        }
-
-        @Override
-        public void setBackground(Color c) {
-            this.bg = c;
-            super.setBackground(c);
-            repaint();
+        public Dimension getMaximumSize() {
+            return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
         }
 
         @Override
         protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(bg != null ? bg : Color.WHITE);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
-            g2.dispose();
-            super.paintComponent(g);
-        }
-    }
-
-    /**
-     * Subtle multi-layer drop shadow container.
-     */
-    private static final class ShadowContainer extends JPanel {
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            for (int i = 0; i < 5; i++) {
-                float alpha = 0.022f - (i * 0.0035f);
-                if (alpha <= 0) break;
-                g2.setColor(new Color(0f, 0f, 0f, alpha));
-                g2.fillRoundRect(i * 2 + 4, i * 2 + 6, getWidth() - (i * 4) - 4, getHeight() - (i * 4) - 6, 20, 20);
+            if (bottom == null) {
+                super.paintComponent(g);
+                return;
             }
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setPaint(new GradientPaint(0, 0, top, 0, getHeight(), bottom));
+            g2.fillRect(0, 0, getWidth(), getHeight());
             g2.dispose();
-            super.paintComponent(g);
         }
     }
 
-    /**
-     * Sleek mini bar chart rendered via Java2D with gradient bars, rounded caps, and month labels.
-     */
-    private static final class MiniBarChart extends JPanel {
-        private static final int[] VALUES = {40, 62, 52, 75, 68, 86, 96};
-        private static final String[] MONTHS = {"Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"};
-        private static final Color BAR_MUTED = new Color(0x94, 0xD2, 0xB8);
-        private static final Color BAR_ACTIVE = new Color(0x18, 0xC7, 0x8A);
+    /** Rounded card with optional soft shadow and hover tint. */
+    private static class CardPanel extends JPanel {
+        private final int radius;
+        private final Color fill;
+        private final Color border;
+        private final boolean shadow;
+        private Color hoverFill;
+        private Color hoverBorder;
+        private boolean hover;
 
-        MiniBarChart() {
+        CardPanel(int radius, Color fill, Color border, boolean shadow) {
+            this.radius = radius;
+            this.fill = fill;
+            this.border = border;
+            this.shadow = shadow;
             setOpaque(false);
+        }
+
+        void setHoverStyle(Color hoverFill, Color hoverBorder) {
+            this.hoverFill = hoverFill;
+            this.hoverBorder = hoverBorder;
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    hover = true;
+                    repaint();
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    hover = false;
+                    repaint();
+                }
+            });
         }
 
         @Override
         protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            quality(g2);
+            float x = shadow ? 3 : 0.5f;
+            float y = shadow ? 1 : 0.5f;
+            float w = getWidth() - (shadow ? 7 : 1);
+            float h = getHeight() - (shadow ? 9 : 1);
+            if (shadow) {
+                for (int i = 0; i < 4; i++) {
+                    g2.setColor(new Color(6, 40, 30, 9 - i * 2));
+                    g2.fill(new RoundRectangle2D.Float(x - i, y + 3 - i + 0f, w + 2 * i, h + 2 * i, radius + i, radius + i));
+                }
+            }
+            RoundRectangle2D rr = new RoundRectangle2D.Float(x, y, w, h, radius, radius);
+            g2.setColor(hover && hoverFill != null ? hoverFill : fill);
+            g2.fill(rr);
+            g2.setColor(hover && hoverBorder != null ? hoverBorder : border);
+            g2.setStroke(new BasicStroke(1f));
+            g2.draw(rr);
+            g2.dispose();
+        }
+    }
 
+    private static final class ActionButton extends JButton {
+        private final boolean filled;
+        private final String icon;
+        private boolean hover;
+        private boolean softBorder;
+
+        ActionButton(String text, String icon, boolean filled, int width, int height, Runnable action) {
+            super(text);
+            this.filled = filled;
+            this.icon = icon;
+            setFont(font(Font.BOLD, 14.5f));
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setFocusPainted(false);
+            setOpaque(false);
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            Dimension d = new Dimension(width, height);
+            setPreferredSize(d);
+            setMinimumSize(d);
+            setMaximumSize(d);
+            if (action != null) {
+                addActionListener(e -> action.run());
+            }
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    hover = true;
+                    repaint();
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    hover = false;
+                    repaint();
+                }
+            });
+        }
+
+        ActionButton fullWidth() {
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, getPreferredSize().height));
+            return this;
+        }
+
+        /** Light grey-green outline instead of the strong brand-green one (secondary hero action). */
+        ActionButton softBorder() {
+            this.softBorder = true;
+            return this;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            quality(g2);
             int w = getWidth();
             int h = getHeight();
-            int n = VALUES.length;
-            int gap = 8;
-            int barWidth = Math.max((w - 24 - (gap * (n - 1))) / n, 10);
-            int startX = (w - ((barWidth * n) + (gap * (n - 1)))) / 2;
-            int chartHeight = h - 20;
-
-            g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            int arc = 14;
+            if (filled) {
+                g2.setColor(hover ? C_BRAND_HOV : C_BRAND);
+                g2.fillRoundRect(0, 0, w, h, arc, arc);
+            } else {
+                g2.setColor(hover ? new Color(0xF0, 0xF9, 0xF4) : C_WHITE);
+                g2.fillRoundRect(0, 0, w, h, arc, arc);
+                g2.setColor(softBorder ? new Color(0xC9, 0xDB, 0xD2) : C_BRAND);
+                g2.setStroke(new BasicStroke(softBorder ? 1.2f : 1.5f));
+                g2.drawRoundRect(1, 1, w - 3, h - 3, arc - 2, arc - 2);
+            }
+            Color fg = filled ? C_WHITE : C_DARK_TEAL;
+            g2.setFont(getFont());
             FontMetrics fm = g2.getFontMetrics();
+            int iconSize = 16;
+            int gap = 9;
+            int content = fm.stringWidth(getText()) + (icon != null ? iconSize + gap : 0);
+            int x = (w - content) / 2;
+            if (icon != null) {
+                SvgIcons.paint(g2, icon, x, (h - iconSize) / 2.0, iconSize, fg);
+                x += iconSize + gap;
+            }
+            g2.setColor(fg);
+            g2.drawString(getText(), x, (h - (fm.getAscent() + fm.getDescent())) / 2 + fm.getAscent());
+            g2.dispose();
+        }
+    }
 
-            // Background baseline
-            g2.setColor(new Color(0xEB, 0xF2, 0xEE));
-            g2.drawLine(startX - 6, chartHeight + 2, startX + (barWidth * n) + (gap * (n - 1)) + 6, chartHeight + 2);
+    private static final class Badge extends JComponent {
+        private final String text;
+        private final String icon;
+        private final Color fg;
+        private final Color bg;
+        private final Color bd;
 
-            for (int i = 0; i < n; i++) {
-                int bh = (int) ((VALUES[i] / 100.0) * (chartHeight - 6));
-                int x = startX + (i * (barWidth + gap));
-                int y = chartHeight - bh + 2;
+        Badge(String text, String icon, Color fg, Color bg, Color bd, float size) {
+            this.text = text;
+            this.icon = icon;
+            this.fg = fg;
+            this.bg = bg;
+            this.bd = bd;
+            setFont(font(Font.BOLD, size));
+            setOpaque(false);
+        }
 
-                if (i == n - 1) {
-                    g2.setColor(BAR_ACTIVE);
-                } else {
-                    float factor = (float) i / (n - 1) * 0.65f;
-                    int r = (int) (BAR_MUTED.getRed() + (BAR_ACTIVE.getRed() - BAR_MUTED.getRed()) * factor);
-                    int gr = (int) (BAR_MUTED.getGreen() + (BAR_ACTIVE.getGreen() - BAR_MUTED.getGreen()) * factor);
-                    int b = (int) (BAR_MUTED.getBlue() + (BAR_ACTIVE.getBlue() - BAR_MUTED.getBlue()) * factor);
-                    g2.setColor(new Color(r, gr, b));
-                }
+        @Override
+        public Dimension getPreferredSize() {
+            FontMetrics fm = getFontMetrics(getFont());
+            return new Dimension(fm.stringWidth(text) + (icon != null ? 20 : 0) + 24, 28);
+        }
 
-                g2.fillRoundRect(x, y, barWidth, bh, 6, 6);
+        @Override
+        public Dimension getMaximumSize() {
+            return getPreferredSize();
+        }
 
-                // Month Label
-                g2.setColor(i == n - 1 ? C_DARK_TEAL : C_SEC_TEXT);
-                if (i == n - 1) g2.setFont(new Font("Segoe UI", Font.BOLD, 10));
-                String label = MONTHS[i];
-                int labelX = x + (barWidth - fm.stringWidth(label)) / 2;
-                g2.drawString(label, labelX, h - 2);
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            quality(g2);
+            RoundRectangle2D rr = new RoundRectangle2D.Float(0.5f, 0.5f, getWidth() - 1, getHeight() - 1, 10, 10);
+            g2.setColor(bg);
+            g2.fill(rr);
+            g2.setColor(bd);
+            g2.draw(rr);
+            g2.setFont(getFont());
+            FontMetrics fm = g2.getFontMetrics();
+            int x = 12;
+            if (icon != null) {
+                SvgIcons.paint(g2, icon, x, (getHeight() - 14) / 2.0, 14, fg);
+                x += 20;
+            }
+            g2.setColor(fg);
+            g2.drawString(text, x, (getHeight() - (fm.getAscent() + fm.getDescent())) / 2 + fm.getAscent());
+            g2.dispose();
+        }
+    }
+
+    /** Small icon followed by one or more text lines (separated by '\n'). */
+    private static final class IconLabel extends JComponent {
+        private final String icon;
+        private final String[] lines;
+        private final Color iconColor;
+        private final int iconSize;
+        private final int gap;
+
+        IconLabel(String icon, String text, Font font, Color textColor, Color iconColor, int iconSize, int gap) {
+            this.icon = icon;
+            this.lines = text.split("\n");
+            this.iconColor = iconColor;
+            this.iconSize = iconSize;
+            this.gap = gap;
+            setFont(font);
+            setForeground(textColor);
+            setOpaque(false);
+        }
+
+        private int lineHeight() {
+            return Math.round(getFont().getSize2D() * 1.4f);
+        }
+
+        @Override
+        public Dimension getPreferredSize() {
+            FontMetrics fm = getFontMetrics(getFont());
+            int widest = 0;
+            for (String l : lines) {
+                widest = Math.max(widest, fm.stringWidth(l));
+            }
+            return new Dimension(iconSize + gap + widest + 2, Math.max(iconSize, lines.length * lineHeight()));
+        }
+
+        @Override
+        public Dimension getMinimumSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public Dimension getMaximumSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            quality(g2);
+            SvgIcons.paint(g2, icon, 0, (getHeight() - iconSize) / 2.0, iconSize, iconColor);
+            g2.setFont(getFont());
+            g2.setColor(getForeground());
+            FontMetrics fm = g2.getFontMetrics();
+            int lh = lineHeight();
+            int y = (getHeight() - lines.length * lh) / 2;
+            for (String l : lines) {
+                g2.drawString(l, iconSize + gap, y + (lh - (fm.getAscent() + fm.getDescent())) / 2 + fm.getAscent());
+                y += lh;
             }
             g2.dispose();
         }
     }
 
-    /**
-     * Vector icon component drawn with crisp Java2D lines and curves.
-     * Supports Receipt OCR, Insights, Reports, Search, Export, Security, Check, and Brand.
-     */
-    private static final class VectorIcon extends JComponent {
-        private final String type;
-        private final int size;
-        private final Color color;
+    private static final class IconBox extends JComponent {
+        private final String icon;
+        private final int box;
+        private final int iconSize;
+        private final boolean circle;
 
-        VectorIcon(String type, int size, Color color) {
-            this.type = type;
-            this.size = size;
-            this.color = color;
-            setPreferredSize(new Dimension(size, size));
-            setMinimumSize(new Dimension(size, size));
-            setMaximumSize(new Dimension(size, size));
+        IconBox(String icon, int box, int iconSize, boolean circle) {
+            this.icon = icon;
+            this.box = box;
+            this.iconSize = iconSize;
+            this.circle = circle;
+            Dimension d = new Dimension(box, box);
+            setPreferredSize(d);
+            setMinimumSize(d);
+            setMaximumSize(d);
             setOpaque(false);
         }
 
         @Override
         protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+            quality(g2);
+            Shape s = circle
+                    ? new Ellipse2D.Float(0.5f, 0.5f, box - 1, box - 1)
+                    : new RoundRectangle2D.Float(0.5f, 0.5f, box - 1, box - 1, 14, 14);
+            g2.setColor(C_ICON_BG);
+            g2.fill(s);
+            g2.setColor(C_ICON_BD);
+            g2.draw(s);
+            SvgIcons.paint(g2, icon, (box - iconSize) / 2.0, (box - iconSize) / 2.0, iconSize, C_BRAND);
+            g2.dispose();
+        }
+    }
 
-            int s = size;
+    private static final class ArrowConnector extends JComponent {
+        ArrowConnector() {
+            setPreferredSize(new Dimension(52, 24));
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            quality(g2);
+            g2.setColor(C_BRAND);
+            g2.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            int cy = getHeight() / 2;
+            int x0 = 12;
+            int x1 = getWidth() - 12;
+            g2.drawLine(x0, cy, x1, cy);
+            g2.drawLine(x1 - 6, cy - 6, x1, cy);
+            g2.drawLine(x1 - 6, cy + 6, x1, cy);
+            g2.dispose();
+        }
+    }
+
+    private static final class SocialIcon extends JComponent {
+        private final String type;
+
+        SocialIcon(String type) {
+            this.type = type;
+            setPreferredSize(new Dimension(22, 22));
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            quality(g2);
+            SvgIcons.paint(g2, type, 0, 0, 22, new Color(0xE6, 0xF2, 0xEC));
+            g2.dispose();
+        }
+    }
+
+    /** Dropdown-style value box used in the "Categorize" mock form. */
+    private static final class ValueBox extends JComponent {
+        private final String icon;
+        private final String text;
+        private final Color color;
+        private final boolean chevron;
+
+        ValueBox(String icon, String text, Color color, boolean chevron) {
+            this.icon = icon;
+            this.text = text;
+            this.color = color;
+            this.chevron = chevron;
+            setFont(font(Font.PLAIN, 12f));
+            setPreferredSize(new Dimension(120, 30));
+            setMinimumSize(new Dimension(60, 30));
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            quality(g2);
+            RoundRectangle2D rr = new RoundRectangle2D.Float(0.5f, 0.5f, getWidth() - 1, getHeight() - 1, 8, 8);
+            g2.setColor(C_WHITE);
+            g2.fill(rr);
+            g2.setColor(new Color(0xD5, 0xE0, 0xDB));
+            g2.draw(rr);
+            int x = 10;
+            if (icon != null) {
+                SvgIcons.paint(g2, icon, x, (getHeight() - 14) / 2.0, 14, C_BRAND);
+                x += 22;
+            }
+            g2.setFont(getFont());
             g2.setColor(color);
-
-            switch (type) {
-                case "brand": {
-                    // Modern stylized brand mark: outer rounded square + inner accent node
-                    g2.setStroke(new BasicStroke(1.8f));
-                    g2.drawRoundRect(2, 2, s - 5, s - 5, 6, 6);
-                    g2.setColor(C_ACCENT);
-                    g2.fillOval(s / 2 - 3, s / 2 - 3, 6, 6);
-                    break;
-                }
-                case "check": {
-                    // Checkmark
-                    g2.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    g2.drawLine(2, s / 2, s / 2 - 1, s - 3);
-                    g2.drawLine(s / 2 - 1, s - 3, s - 2, 2);
-                    break;
-                }
-                case "ocr": {
-                    // Receipt sheet outline + scan line + detail lines
-                    g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    g2.drawRoundRect(4, 2, s - 8, s - 4, 3, 3);
-                    // Receipt detail lines
-                    g2.drawLine(7, 7, s - 7, 7);
-                    g2.drawLine(7, 11, s - 7, 11);
-                    g2.drawLine(7, 15, s - 11, 15);
-                    // Optical scanning beam across center
-                    g2.setColor(C_ACCENT);
-                    g2.setStroke(new BasicStroke(1.8f));
-                    g2.drawLine(1, s / 2 + 1, s - 2, s / 2 + 1);
-                    break;
-                }
-                case "insights": {
-                    // Upward trending bar chart + polyline
-                    g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    int bw = Math.max((s - 12) / 3, 3);
-                    // Bar 1
-                    g2.drawRoundRect(4, s - 9, bw, 6, 2, 2);
-                    // Bar 2
-                    g2.drawRoundRect(4 + bw + 2, s - 14, bw, 11, 2, 2);
-                    // Bar 3
-                    g2.setColor(C_ACCENT);
-                    g2.drawRoundRect(4 + (bw + 2) * 2, s - 19, bw, 16, 2, 2);
-                    // Trending arrow line
-                    g2.setColor(color);
-                    g2.setStroke(new BasicStroke(1.5f));
-                    g2.drawLine(4, s - 10, 4 + bw + 2, s - 15);
-                    g2.drawLine(4 + bw + 2, s - 15, 4 + (bw + 2) * 2, s - 20);
-                    break;
-                }
-                case "reports": {
-                    // Document with folded corner + data grid
-                    g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    Path2D p = new Path2D.Float();
-                    p.moveTo(4, 2);
-                    p.lineTo(s - 8, 2);
-                    p.lineTo(s - 4, 6);
-                    p.lineTo(s - 4, s - 3);
-                    p.lineTo(4, s - 3);
-                    p.closePath();
-                    g2.draw(p);
-                    // Fold flap
-                    g2.drawLine(s - 8, 2, s - 8, 6);
-                    g2.drawLine(s - 8, 6, s - 4, 6);
-                    // Table lines inside
-                    g2.drawLine(7, 10, s - 7, 10);
-                    g2.drawLine(7, 14, s - 7, 14);
-                    g2.drawLine(s / 2, 10, s / 2, s - 6);
-                    break;
-                }
-                case "search": {
-                    // Magnifying glass lens + handle + slider tick
-                    g2.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    int lensD = s * 7 / 12;
-                    g2.drawOval(3, 3, lensD, lensD);
-                    g2.drawLine(3 + lensD - 2, 3 + lensD - 2, s - 3, s - 3);
-                    // Filter slider tick
-                    g2.setStroke(new BasicStroke(1.4f));
-                    g2.drawLine(3, s - 3, 8, s - 3);
-                    break;
-                }
-                case "export": {
-                    // Tray box + arrow pointing straight up and out
-                    g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    // Tray base
-                    g2.drawLine(3, s / 2, 3, s - 4);
-                    g2.drawLine(3, s - 4, s - 4, s - 4);
-                    g2.drawLine(s - 4, s - 4, s - 4, s / 2);
-                    // Upward arrow
-                    g2.setColor(C_ACCENT);
-                    g2.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    int cx = s / 2;
-                    g2.drawLine(cx, s - 8, cx, 3);
-                    g2.drawLine(cx - 4, 7, cx, 3);
-                    g2.drawLine(cx + 4, 7, cx, 3);
-                    break;
-                }
-                case "security": {
-                    // Security shield with center checkmark
-                    g2.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    Path2D shield = new Path2D.Float();
-                    shield.moveTo(3, 4);
-                    shield.lineTo(s / 2, 2);
-                    shield.lineTo(s - 4, 4);
-                    shield.curveTo(s - 4, s * 0.65f, s / 2, s - 2, s / 2, s - 2);
-                    shield.curveTo(s / 2, s - 2, 3, s * 0.65f, 3, 4);
-                    shield.closePath();
-                    g2.draw(shield);
-                    // Center checkmark
-                    g2.setColor(C_ACCENT);
-                    g2.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    g2.drawLine(s / 2 - 3, s / 2, s / 2 - 1, s / 2 + 3);
-                    g2.drawLine(s / 2 - 1, s / 2 + 3, s / 2 + 4, s / 2 - 3);
-                    break;
-                }
-                case "security_large": {
-                    // Large Security Banner Shield with Layered Emblem & Keyhole
-                    g2.setStroke(new BasicStroke(2.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
-                    // Outer shield glow / silhouette
-                    Path2D outer = new Path2D.Float();
-                    outer.moveTo(8, 10);
-                    outer.lineTo(s / 2, 4);
-                    outer.lineTo(s - 9, 10);
-                    outer.curveTo(s - 9, s * 0.68f, s / 2, s - 4, s / 2, s - 4);
-                    outer.curveTo(s / 2, s - 4, 8, s * 0.68f, 8, 10);
-                    outer.closePath();
-
-                    g2.setColor(new Color(C_ACCENT.getRed(), C_ACCENT.getGreen(), C_ACCENT.getBlue(), 35));
-                    g2.fill(outer);
-
-                    g2.setColor(C_ACCENT);
-                    g2.draw(outer);
-
-                    // Inner Lock / Keyhole emblem
-                    int kx = s / 2;
-                    int ky = s / 2;
-                    // Padlock shackle
-                    g2.setStroke(new BasicStroke(2.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    g2.drawArc(kx - 10, ky - 18, 20, 20, 0, 180);
-                    // Padlock body
-                    g2.fillRoundRect(kx - 14, ky - 8, 28, 22, 6, 6);
-                    // Keyhole in dark teal
-                    g2.setColor(C_DARK_TEAL);
-                    g2.fillOval(kx - 3, ky - 3, 6, 6);
-                    g2.fillRect(kx - 2, ky, 4, 7);
-                    break;
-                }
-                default: {
-                    g2.fillOval(2, 2, s - 4, s - 4);
-                    break;
-                }
+            FontMetrics fm = g2.getFontMetrics();
+            g2.drawString(text, x, (getHeight() - (fm.getAscent() + fm.getDescent())) / 2 + fm.getAscent());
+            if (chevron) {
+                g2.setColor(C_TEXT2);
+                g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                int cx = getWidth() - 16;
+                int cy = getHeight() / 2;
+                g2.drawLine(cx - 3, cy - 1, cx, cy + 2);
+                g2.drawLine(cx, cy + 2, cx + 3, cy - 1);
             }
             g2.dispose();
         }
     }
+
+    private static final class LogoIcon implements Icon {
+        private final SmoothImage image;
+        private final int w;
+        private final int h;
+
+        LogoIcon(SmoothImage image, int w, int h) {
+            this.image = image;
+            this.w = w;
+            this.h = h;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            image.draw(g2, x, y, w, h);
+            g2.dispose();
+        }
+
+        @Override
+        public int getIconWidth() {
+            return w;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return h;
+        }
+    }
+
+    // ==========================================
+    // Illustrations
+    // ==========================================
+    private static final class ReceiptArt extends JComponent {
+        ReceiptArt() {
+            setPreferredSize(new Dimension(240, 190));
+            setMinimumSize(new Dimension(120, 190));
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 190));
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            quality(g2);
+            int w = getWidth();
+            int h = getHeight();
+            Shape clip = new RoundRectangle2D.Float(0, 0, w, h, 12, 12);
+            g2.setClip(clip);
+            g2.setPaint(new GradientPaint(0, 0, new Color(0xDC, 0xC8, 0xA9), w, h, new Color(0xB8, 0x9E, 0x78)));
+            g2.fill(clip);
+
+            int rw = (int) (w * 0.52);
+            int rh = (int) (h * 0.80);
+            int rx = (w - rw) / 2;
+            int ry = (h - rh) / 2;
+            g2.setColor(new Color(0, 0, 0, 45));
+            g2.fillRoundRect(rx + 3, ry + 5, rw, rh, 4, 4);
+            g2.setColor(new Color(0xFC, 0xFB, 0xF7));
+            g2.fillRect(rx, ry, rw, rh);
+
+            g2.setColor(new Color(0x2A, 0x2A, 0x2A));
+            g2.setFont(font(Font.BOLD, 11f));
+            centerString(g2, "STARBUCKS", rx + rw / 2, ry + 24);
+            g2.setFont(font(Font.PLAIN, 8.5f));
+            g2.setColor(new Color(0x70, 0x70, 0x70));
+            centerString(g2, "Coffee Shop", rx + rw / 2, ry + 37);
+
+            g2.setColor(new Color(0xD8, 0xD8, 0xD8));
+            g2.setStroke(new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 1f, new float[]{3f, 3f}, 0f));
+            g2.drawLine(rx + 10, ry + 46, rx + rw - 10, ry + 46);
+            g2.setStroke(new BasicStroke(1f));
+            int[] widths = {58, 44, 52};
+            int ly = ry + 58;
+            for (int lw : widths) {
+                g2.setColor(new Color(0xE2, 0xE2, 0xE2));
+                g2.fillRoundRect(rx + 10, ly, (int) (lw * rw / 100.0 * 1.2), 5, 3, 3);
+                g2.fillRoundRect(rx + rw - 28, ly, 18, 5, 3, 3);
+                ly += 13;
+            }
+            g2.setColor(new Color(0xD8, 0xD8, 0xD8));
+            g2.drawLine(rx + 10, ly + 2, rx + rw - 10, ly + 2);
+            g2.setColor(new Color(0x2A, 0x2A, 0x2A));
+            g2.setFont(font(Font.BOLD, 10f));
+            g2.drawString("Total", rx + 10, ly + 20);
+            g2.setFont(font(Font.BOLD, 12f));
+            FontMetrics fm = g2.getFontMetrics();
+            g2.drawString("₹340.00", rx + rw - 10 - fm.stringWidth("₹340.00"), ly + 20);
+
+            g2.setClip(null);
+            g2.setColor(C_MINT);
+            g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            int bx0 = Math.max(10, rx - 16);
+            int bx1 = Math.min(w - 10, rx + rw + 16);
+            int by0 = Math.max(10, ry - 12);
+            int by1 = Math.min(h - 10, ry + rh + 12);
+            int len = 22;
+            g2.drawLine(bx0, by0 + len, bx0, by0);
+            g2.drawLine(bx0, by0, bx0 + len, by0);
+            g2.drawLine(bx1 - len, by0, bx1, by0);
+            g2.drawLine(bx1, by0, bx1, by0 + len);
+            g2.drawLine(bx0, by1 - len, bx0, by1);
+            g2.drawLine(bx0, by1, bx0 + len, by1);
+            g2.drawLine(bx1 - len, by1, bx1, by1);
+            g2.drawLine(bx1, by1, bx1, by1 - len);
+            g2.dispose();
+        }
+
+        private static void centerString(Graphics2D g2, String s, int cx, int baseline) {
+            g2.drawString(s, cx - g2.getFontMetrics().stringWidth(s) / 2, baseline);
+        }
+    }
+
+    private static final class MonthlyChart extends JComponent {
+        private static final double[] VALUES = {2, 3.4, 5, 6.5, 8, 9.6, 11, 12.6, 14.6};
+        private static final String[] MONTHS = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"};
+
+        MonthlyChart() {
+            setPreferredSize(new Dimension(240, 120));
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            quality(g2);
+            int w = getWidth();
+            int h = getHeight();
+            g2.setFont(font(Font.BOLD, 11f));
+            g2.setColor(C_INK);
+            g2.drawString("Monthly Spending", 0, 11);
+
+            int left = 30;
+            int top = 22;
+            int bottom = h - 16;
+            g2.setFont(font(Font.PLAIN, 9f));
+            FontMetrics fm = g2.getFontMetrics();
+            String[] ticks = {"15k", "10k", "5k", "0"};
+            for (int i = 0; i < ticks.length; i++) {
+                int y = top + (bottom - top) * i / 3;
+                g2.setColor(new Color(0xE9, 0xEF, 0xEC));
+                g2.drawLine(left, y, w, y);
+                g2.setColor(C_TEXT2);
+                g2.drawString(ticks[i], left - 6 - fm.stringWidth(ticks[i]), y + 3);
+            }
+            int n = VALUES.length;
+            int areaW = w - left - 4;
+            int slot = areaW / n;
+            int bw = Math.max(6, slot - 7);
+            for (int i = 0; i < n; i++) {
+                int bh = (int) ((bottom - top) * VALUES[i] / 15.0);
+                int x = left + 4 + i * slot;
+                float t = i / (float) (n - 1);
+                Color c = i == n - 1 ? new Color(0x0A, 0x7A, 0x55)
+                        : new Color((int) (0xB5 - 0x6B * t), (int) (0xEB - 0x2B * t), (int) (0xD2 - 0x42 * t));
+                g2.setColor(c);
+                g2.fillRoundRect(x, bottom - bh, bw, bh, 4, 4);
+                g2.setColor(C_TEXT2);
+                g2.drawString(MONTHS[i], x + (bw - fm.stringWidth(MONTHS[i])) / 2, h - 3);
+            }
+            g2.dispose();
+        }
+    }
+
+    private static final class CategoryDonut extends JComponent {
+        private static final String[] NAMES = {"Food & Dining", "Travel", "Shopping", "Bills & Utilities", "Entertainment", "Others"};
+        private static final int[] PCT = {32, 18, 16, 14, 10, 10};
+        private static final Color[] COLORS = {
+                new Color(0x10, 0xB9, 0x81), new Color(0x3B, 0x82, 0xF6), new Color(0xF5, 0x9E, 0x0B),
+                new Color(0xEF, 0x44, 0x6E), new Color(0xC0, 0x26, 0xD3), new Color(0x64, 0x74, 0x8B)};
+
+        CategoryDonut() {
+            setPreferredSize(new Dimension(240, 120));
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            quality(g2);
+            int w = getWidth();
+            int h = getHeight();
+            g2.setFont(font(Font.BOLD, 11f));
+            g2.setColor(C_INK);
+            g2.drawString("Spending by Category", 0, 11);
+
+            int d = Math.min(h - 22, 92);
+            int dx = 4;
+            int dy = 20 + (h - 20 - d) / 2;
+            double start = 90;
+            float thick = 15f;
+            g2.setStroke(new BasicStroke(thick, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
+            for (int i = 0; i < PCT.length; i++) {
+                double extent = -PCT[i] * 3.6;
+                g2.setColor(COLORS[i]);
+                g2.draw(new Arc2D.Double(dx + thick / 2, dy + thick / 2, d - thick, d - thick, start, extent, Arc2D.OPEN));
+                start += extent;
+            }
+            g2.setColor(C_INK);
+            g2.setFont(font(Font.BOLD, 11f));
+            FontMetrics fm = g2.getFontMetrics();
+            g2.drawString("₹24,560", dx + (d - fm.stringWidth("₹24,560")) / 2, dy + d / 2);
+            g2.setFont(font(Font.PLAIN, 9f));
+            fm = g2.getFontMetrics();
+            g2.setColor(C_TEXT2);
+            g2.drawString("Total", dx + (d - fm.stringWidth("Total")) / 2, dy + d / 2 + 12);
+
+            int lx = dx + d + 18;
+            int rowH = 14;
+            int ly = dy + (d - rowH * NAMES.length) / 2 + 10;
+            g2.setFont(font(Font.PLAIN, 10f));
+            fm = g2.getFontMetrics();
+            for (int i = 0; i < NAMES.length; i++) {
+                g2.setColor(COLORS[i]);
+                g2.fillOval(lx, ly - 7, 6, 6);
+                g2.setColor(C_TEXT2);
+                g2.drawString(NAMES[i], lx + 12, ly);
+                String p = PCT[i] + "%";
+                g2.drawString(p, w - 4 - fm.stringWidth(p), ly);
+                ly += rowH;
+            }
+            g2.dispose();
+        }
+    }
+
+    private static final class SecurityPanel extends JPanel {
+        SecurityPanel() {
+            setOpaque(true);
+            setBackground(new Color(0x06, 0x3B, 0x2E));
+        }
+
+        @Override
+        public Dimension getMaximumSize() {
+            return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setPaint(new LinearGradientPaint(0, 0, getWidth(), 0, new float[]{0f, 0.55f, 1f},
+                    new Color[]{new Color(0x05, 0x36, 0x2A), new Color(0x07, 0x4A, 0x39), new Color(0x0B, 0x63, 0x4A)}));
+            g2.fillRect(0, 0, getWidth(), getHeight());
+            g2.dispose();
+        }
+    }
+
+    private static final class ShieldArt extends JComponent {
+        ShieldArt() {
+            setPreferredSize(new Dimension(460, 330));
+            setMinimumSize(new Dimension(300, 300));
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            quality(g2);
+            int w = getWidth();
+            int h = getHeight();
+            int cx = w / 2 + 6;
+            int baseY = (int) (h * 0.76);
+
+            Graphics2D glow = (Graphics2D) g2.create();
+            float rad = w * 0.46f;
+            glow.translate(cx, baseY);
+            glow.scale(1, 0.28);
+            glow.setPaint(new RadialGradientPaint(new Point2D.Float(0, 0), rad, new float[]{0f, 0.55f, 1f},
+                    new Color[]{new Color(70, 235, 190, 150), new Color(30, 190, 150, 60), new Color(30, 190, 150, 0)}));
+            glow.fill(new Ellipse2D.Float(-rad, -rad, rad * 2, rad * 2));
+            glow.dispose();
+
+            g2.setStroke(new BasicStroke(1.6f));
+            double[] radii = {0.22, 0.33, 0.44};
+            int[] alphas = {170, 100, 55};
+            for (int i = 0; i < radii.length; i++) {
+                double r = radii[i] * w;
+                g2.setColor(new Color(90, 245, 205, alphas[i]));
+                g2.draw(new Ellipse2D.Double(cx - r, baseY - r * 0.28, r * 2, r * 0.56));
+            }
+
+            double sw = Math.min(h * 0.60, 220);
+            double sh = sw * 1.18;
+            double y0 = baseY - sh * 0.84;
+            Path2D shield = shieldPath(cx, y0, sw, sh);
+            g2.setPaint(new GradientPaint((float) (cx - sw / 2), (float) y0, new Color(235, 250, 245, 235),
+                    (float) (cx + sw / 2), (float) (y0 + sh), new Color(120, 205, 185, 215)));
+            g2.fill(shield);
+            Path2D inner = shieldPath(cx, y0 + sh * 0.06, sw * 0.82, sh * 0.86);
+            g2.setPaint(new GradientPaint((float) cx, (float) y0, new Color(255, 255, 255, 190),
+                    (float) cx, (float) (y0 + sh), new Color(90, 190, 170, 120)));
+            g2.fill(inner);
+            g2.setColor(new Color(255, 255, 255, 210));
+            g2.setStroke(new BasicStroke(2.6f));
+            g2.draw(shield);
+
+            double lw = sw * 0.34;
+            double lh = lw * 0.82;
+            double lx = cx - lw / 2;
+            double ly = y0 + sh * 0.43;
+            g2.setStroke(new BasicStroke((float) (lw * 0.15), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.setColor(new Color(0xC4, 0xCC, 0xD0));
+            g2.draw(new Arc2D.Double(lx + lw * 0.2, ly - lh * 0.62, lw * 0.6, lh * 0.9, 0, 180, Arc2D.OPEN));
+            g2.draw(new Line2D.Double(lx + lw * 0.2, ly - lh * 0.17, lx + lw * 0.2, ly));
+            g2.draw(new Line2D.Double(lx + lw * 0.8, ly - lh * 0.17, lx + lw * 0.8, ly));
+            g2.setPaint(new GradientPaint((float) lx, (float) ly, new Color(0xF2, 0xF4, 0xF5),
+                    (float) lx, (float) (ly + lh), new Color(0xA9, 0xB3, 0xB8)));
+            g2.fill(new RoundRectangle2D.Double(lx, ly, lw, lh, 10, 10));
+            g2.setColor(new Color(0x55, 0x60, 0x66));
+            g2.fill(new Ellipse2D.Double(cx - lw * 0.07, ly + lh * 0.28, lw * 0.14, lw * 0.14));
+            g2.fill(new RoundRectangle2D.Double(cx - lw * 0.035, ly + lh * 0.40, lw * 0.07, lh * 0.28, 3, 3));
+
+            floatingTile(g2, "clock", cx + sw * 0.66, y0 + sh * 0.02, 42, true);
+            floatingTile(g2, "lock", cx - sw * 1.02, y0 + sh * 0.30, 34, false);
+            floatingTile(g2, "file", cx + sw * 0.78, y0 + sh * 0.58, 42, false);
+            g2.dispose();
+        }
+
+        private static Path2D shieldPath(double cx, double y0, double w, double h) {
+            Path2D p = new Path2D.Double();
+            p.moveTo(cx, y0);
+            p.curveTo(cx + 0.2 * w, y0 + 0.10 * h, cx + 0.40 * w, y0 + 0.12 * h, cx + 0.5 * w, y0 + 0.12 * h);
+            p.curveTo(cx + 0.5 * w, y0 + 0.55 * h, cx + 0.30 * w, y0 + 0.85 * h, cx, y0 + h);
+            p.curveTo(cx - 0.30 * w, y0 + 0.85 * h, cx - 0.5 * w, y0 + 0.55 * h, cx - 0.5 * w, y0 + 0.12 * h);
+            p.curveTo(cx - 0.40 * w, y0 + 0.12 * h, cx - 0.2 * w, y0 + 0.10 * h, cx, y0);
+            p.closePath();
+            return p;
+        }
+
+        private static void floatingTile(Graphics2D g2, String icon, double x, double y, int size, boolean circle) {
+            Shape s = circle
+                    ? new Ellipse2D.Double(x, y, size, size)
+                    : new RoundRectangle2D.Double(x, y, size, size, 12, 12);
+            g2.setColor(new Color(255, 255, 255, 34));
+            g2.fill(s);
+            g2.setColor(new Color(255, 255, 255, 110));
+            g2.setStroke(new BasicStroke(1.2f));
+            g2.draw(s);
+            double is = size * 0.5;
+            SvgIcons.paint(g2, icon, x + (size - is) / 2, y + (size - is) / 2, is, new Color(255, 255, 255, 225));
+        }
+    }
+
 }

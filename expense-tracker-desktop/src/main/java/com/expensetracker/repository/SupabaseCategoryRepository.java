@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -45,14 +44,6 @@ public final class SupabaseCategoryRepository implements CategoryRepository {
             }
         }
         return categories;
-    }
-
-    @Override
-    public Optional<Category> findById(UUID categoryId) {
-        if (categoryId == null) {
-            return Optional.empty();
-        }
-        return findAll().stream().filter(category -> category.id().equals(categoryId)).findFirst();
     }
 
     private JsonNode parse(String body) {

@@ -14,6 +14,7 @@ public final class SupabaseAuthService implements AuthService {
     private final SupabaseClient client;
     private final ObjectMapper objectMapper;
     private SupabaseSession session;
+    private String displayName = "";
 
     public SupabaseAuthService(SupabaseClient client) {
         this.client = client;
@@ -64,11 +65,86 @@ public final class SupabaseAuthService implements AuthService {
     }
 
     @Override
-    public synchronized void logout() {
-        if (session != null && session.accessToken() != null && !session.accessToken().isBlank()) {
-            client.send("/auth/v1/logout", "POST", "{}", session.accessToken());
+    public void sendPasswordReset(String email) {
+        String body = objectMapper.createObjectNode().put("email", email).toString();
+        var response = client.send("/auth/v1/recover", "POST", body, null);
+        if (!isSuccessful(response.statusCode())) {
+            throw new ServiceException(readError(response.body(), "Unable to send the password reset email."));
         }
+    }
+
+    @Override
+    public synchronized String getDisplayName() {
+        return displayName;
+    }
+
+    @Override
+    public void updateDisplayName(String newName) {
+        String name = newName == null ? "" : newName.trim();
+        var data = objectMapper.createObjectNode();
+        data.putObject("data").put("display_name", name);
+        var response = client.send("/auth/v1/user", "PUT", data.toString(), requireToken());
+        if (!isSuccessful(response.statusCode())) {
+            throw new ServiceException(readError(response.body(), "Unable to save the display name."));
+        }
+        synchronized (this) {
+            displayName = name;
+        }
+    }
+
+    @Override
+    public void changePassword(char[] newPassword) {
+        String passwordValue = new String(newPassword);
+        Arrays.fill(newPassword, '\0');
+        try {
+            String body = objectMapper.createObjectNode().put("password", passwordValue).toString();
+            var response = client.send("/auth/v1/user", "PUT", body, requireToken());
+            if (!isSuccessful(response.statusCode())) {
+                throw new ServiceException(readError(response.body(), "Unable to change the password."));
+            }
+        } finally {
+            passwordValue = null;
+        }
+    }
+
+    @Override
+    public void deleteAccount(boolean confirm) {
+        String body = objectMapper.createObjectNode().put("confirm", confirm).toString();
+        var response = client.send("/rest/v1/rpc/delete_my_account", "POST", body, requireToken());
+        if (response.statusCode() == 404) {
+            throw new ServiceException(
+                    "Account deletion is not set up in your database yet. Run the updated supabase/schema.sql in the Supabase SQL editor.");
+        }
+        if (!isSuccessful(response.statusCode())) {
+            throw new ServiceException(readError(response.body(), "Unable to delete the account."));
+        }
+    }
+
+    private String requireToken() {
+        String token = getAccessToken();
+        if (token == null || token.isBlank()) {
+            throw new ServiceException("Your session has expired. Please sign in again.");
+        }
+        return token;
+    }
+
+    @Override
+    public synchronized void logout() {
+        String token = session == null ? "" : session.accessToken();
         session = null;
+        displayName = "";
+        if (token != null && !token.isBlank()) {
+            // Revoking the token is best effort; do not block the caller (often the UI thread) on the network.
+            Thread revoke = new Thread(() -> {
+                try {
+                    client.send("/auth/v1/logout", "POST", "{}", token);
+                } catch (ServiceException ignored) {
+                    // The local session is already cleared; the token simply expires on its own.
+                }
+            }, "supabase-logout");
+            revoke.setDaemon(true);
+            revoke.start();
+        }
     }
 
     @Override
@@ -76,13 +152,50 @@ public final class SupabaseAuthService implements AuthService {
         return session == null ? null : session.user();
     }
 
-    public synchronized SupabaseSession getCurrentSession() {
-        return session;
-    }
-
+    /** Returns a valid access token, renewing it first when it is about to expire. */
     @Override
     public synchronized String getAccessToken() {
+        if (session != null && needsRefresh(session)) {
+            refreshSession();
+        }
         return session == null ? "" : session.accessToken();
+    }
+
+    private static boolean needsRefresh(SupabaseSession current) {
+        return current.refreshToken() != null && !current.refreshToken().isBlank()
+                && Instant.now().isAfter(current.expiresAt().minusSeconds(60));
+    }
+
+    /**
+     * Exchanges the refresh token for a new access token. A rejected refresh token ends the session;
+     * a network or server hiccup keeps the current token so the next call can try again.
+     */
+    private void refreshSession() {
+        try {
+            String body = objectMapper.createObjectNode().put("refresh_token", session.refreshToken()).toString();
+            var response = client.send("/auth/v1/token?grant_type=refresh_token", "POST", body, null);
+            int status = response.statusCode();
+            if (status >= 400 && status < 500) {
+                session = null;
+                displayName = "";
+                return;
+            }
+            if (!isSuccessful(status)) {
+                return;
+            }
+            JsonNode payload = parse(response.body());
+            if (payload.path("access_token").asText().isBlank()) {
+                return;
+            }
+            JsonNode userNode = payload.path("user");
+            session = toSession(payload, userNode.isMissingNode() ? userNodeOf(session.user()) : userNode);
+        } catch (ServiceException | com.fasterxml.jackson.core.JsonProcessingException ignored) {
+            // Keep the existing token; the request that needed it will report the real problem.
+        }
+    }
+
+    private JsonNode userNodeOf(User user) {
+        return objectMapper.createObjectNode().put("id", user.id().toString()).put("email", user.email());
     }
 
     private User authenticate(String email, char[] password, String endpoint) {
@@ -112,6 +225,7 @@ public final class SupabaseAuthService implements AuthService {
     }
 
     private SupabaseSession toSession(JsonNode payload, JsonNode userNode) {
+        displayName = userNode.path("user_metadata").path("display_name").asText("");
         long expiresIn = payload.path("expires_in").asLong(3600);
         return new SupabaseSession(
                 payload.path("access_token").asText(),

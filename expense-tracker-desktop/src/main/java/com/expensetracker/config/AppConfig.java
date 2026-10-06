@@ -16,10 +16,6 @@ public record AppConfig(
     private static final long DEFAULT_MAX_RECEIPT_SIZE_BYTES = 10 * 1024 * 1024;
     private static final Map<String, String> ENV_FILE_CACHE = loadDotEnv();
 
-    public AppConfig(String supabaseUrl, String supabaseAnonKey, String storageBucket) {
-        this(supabaseUrl, supabaseAnonKey, storageBucket, DEFAULT_MAX_RECEIPT_SIZE_BYTES);
-    }
-
     public static AppConfig fromEnvironment() {
         return new AppConfig(
                 readOrDefault("SUPABASE_URL", "https://gyqujxvriciejibrmsjq.supabase.co"),

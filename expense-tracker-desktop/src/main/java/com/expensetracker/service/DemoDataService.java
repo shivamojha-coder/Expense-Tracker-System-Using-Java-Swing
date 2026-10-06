@@ -112,11 +112,6 @@ public final class DemoDataService {
         public List<Category> findAll() {
             return new ArrayList<>(categories);
         }
-
-        @Override
-        public Optional<Category> findById(UUID categoryId) {
-            return categories.stream().filter(c -> c.id().equals(categoryId)).findFirst();
-        }
     }
 
     public static final class InMemoryExpenseRepository implements ExpenseRepository {

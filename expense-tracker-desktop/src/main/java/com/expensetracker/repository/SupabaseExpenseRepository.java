@@ -27,6 +27,8 @@ import java.util.function.Supplier;
  * desktop client from accidentally addressing an unowned row.</p>
  */
 public final class SupabaseExpenseRepository implements ExpenseRepository {
+    private static final int PAGE_SIZE = 500;
+
     private final SupabaseClient client;
     private final Supplier<String> accessTokenSupplier;
     private final UUID userId;
@@ -40,10 +42,6 @@ public final class SupabaseExpenseRepository implements ExpenseRepository {
         this.client = client;
         this.accessTokenSupplier = accessTokenSupplier;
         this.userId = userId;
-    }
-
-    public SupabaseExpenseRepository(SupabaseClient client, String accessToken, UUID userId) {
-        this(client, () -> accessToken, userId);
     }
 
     @Override
@@ -82,24 +80,30 @@ public final class SupabaseExpenseRepository implements ExpenseRepository {
         if (!userId.equals(requestedUserId)) {
             throw new ServiceException("You can only view your own expenses.");
         }
-        HttpResponse<String> response = client.send(
-                expensePath(""),
-                "GET",
-                null,
-                accessToken()
-        );
-        ensureSuccess(response, "Unable to load expenses.");
-        JsonNode rows = parse(response.body(), "Supabase returned invalid expense data.");
-        if (!rows.isArray()) {
-            throw new ServiceException("Supabase returned invalid expense data.");
-        }
+        // PostgREST returns at most its configured page size (1000 by default) per request,
+        // so read page by page; otherwise users with many expenses silently lose the oldest ones.
         List<Expense> expenses = new ArrayList<>();
-        for (JsonNode row : rows) {
-            Expense expense = fromJson(row);
-            requireReturnedOwned(expense);
-            expenses.add(expense);
+        for (int offset = 0; ; offset += PAGE_SIZE) {
+            HttpResponse<String> response = client.send(
+                    expensePath("limit=" + PAGE_SIZE + "&offset=" + offset),
+                    "GET",
+                    null,
+                    accessToken()
+            );
+            ensureSuccess(response, "Unable to load expenses.");
+            JsonNode rows = parse(response.body(), "Supabase returned invalid expense data.");
+            if (!rows.isArray()) {
+                throw new ServiceException("Supabase returned invalid expense data.");
+            }
+            for (JsonNode row : rows) {
+                Expense expense = fromJson(row);
+                requireReturnedOwned(expense);
+                expenses.add(expense);
+            }
+            if (rows.size() < PAGE_SIZE) {
+                return expenses;
+            }
         }
-        return expenses;
     }
 
     @Override
@@ -143,7 +147,8 @@ public final class SupabaseExpenseRepository implements ExpenseRepository {
         if (!additionalFilter.isBlank()) {
             path.append('&').append(additionalFilter);
         }
-        path.append("&order=expense_date.desc,created_at.desc");
+        // "id" makes the order total, so paging never repeats or skips rows that share a date and timestamp.
+        path.append("&order=expense_date.desc,created_at.desc,id.asc");
         return path.toString();
     }
 

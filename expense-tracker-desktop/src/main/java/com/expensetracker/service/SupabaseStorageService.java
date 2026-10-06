@@ -3,6 +3,7 @@ package com.expensetracker.service;
 import com.expensetracker.supabase.SupabaseClient;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -44,15 +45,6 @@ public final class SupabaseStorageService implements StorageService {
         if (userId == null) {
             throw new IllegalArgumentException("User is required for receipt storage.");
         }
-    }
-
-    public SupabaseStorageService(
-            SupabaseClient client,
-            Supplier<String> accessTokenSupplier,
-            String bucket,
-            UUID userId
-    ) {
-        this(client, accessTokenSupplier, bucket, userId, 10 * 1024 * 1024);
     }
 
     @Override
@@ -103,19 +95,14 @@ public final class SupabaseStorageService implements StorageService {
     @Override
     public void deleteReceipt(String receiptPath) {
         requireOwnedPath(receiptPath);
-        String body;
-        try {
-            body = objectMapper.createObjectNode()
-                    .putArray("prefixes")
-                    .add(receiptPath)
-                    .toString();
-        } catch (RuntimeException exception) {
-            throw new ServiceException("The receipt could not be removed.", exception);
-        }
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.putArray("prefixes").add(receiptPath);
+        String body = payload.toString();
+        // Supabase Storage removes objects with DELETE /object/{bucket} and a {"prefixes": [...]} body.
         HttpRequest request = baseRequest(
                 "/storage/v1/object/" + encodeSegment(bucket)
         ).header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .method("DELETE", HttpRequest.BodyPublishers.ofString(body))
                 .build();
         ensureSuccess(send(request), "Receipt removal failed.");
     }

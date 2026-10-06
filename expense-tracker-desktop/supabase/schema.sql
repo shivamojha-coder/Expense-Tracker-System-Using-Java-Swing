@@ -155,6 +155,89 @@ create policy "Users can delete their own receipts"
     );
 
 -- ============================================================
+-- 5. budgets (Settings > Budgets & alerts)
+-- ============================================================
+-- One row per monthly limit. category_id NULL is the overall monthly budget.
+-- Column names line up with SupabaseBudgetRepository.
+create table if not exists public.budgets (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    category_id uuid references public.categories(id) on delete cascade,
+    monthly_limit numeric(12, 2) not null check (monthly_limit > 0),
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+-- At most one limit per category per user, and one overall limit per user.
+create unique index if not exists budgets_user_category_idx
+    on public.budgets (user_id, category_id) where category_id is not null;
+create unique index if not exists budgets_user_overall_idx
+    on public.budgets (user_id) where category_id is null;
+
+alter table public.budgets enable row level security;
+
+drop policy if exists "Users can view their own budgets" on public.budgets;
+create policy "Users can view their own budgets"
+    on public.budgets for select
+    to authenticated
+    using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert their own budgets" on public.budgets;
+create policy "Users can insert their own budgets"
+    on public.budgets for insert
+    to authenticated
+    with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their own budgets" on public.budgets;
+create policy "Users can update their own budgets"
+    on public.budgets for update
+    to authenticated
+    using (auth.uid() = user_id)
+    with check (auth.uid() = user_id);
+
+drop policy if exists "Users can delete their own budgets" on public.budgets;
+create policy "Users can delete their own budgets"
+    on public.budgets for delete
+    to authenticated
+    using (auth.uid() = user_id);
+
+drop trigger if exists budgets_set_updated_at on public.budgets;
+create trigger budgets_set_updated_at
+    before update on public.budgets
+    for each row
+    execute function public.set_updated_at();
+
+-- ============================================================
+-- 6. delete_my_account() (Settings > Data & privacy)
+-- ============================================================
+-- Lets a signed-in user delete their own login. The desktop app cannot do this
+-- with the public (anon) key alone, so it calls this function instead.
+-- The user's expenses and budgets are removed by the "on delete cascade"
+-- foreign keys. Receipt files are deleted by the app through the Storage API
+-- before this is called.
+-- Calling it with confirm = false deletes nothing; the app uses that to check the
+-- function exists before it starts removing receipt files.
+create or replace function public.delete_my_account(confirm boolean default false)
+returns void
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+begin
+    if auth.uid() is null then
+        raise exception 'Not signed in';
+    end if;
+    if confirm is true then
+        delete from auth.users where id = auth.uid();
+    end if;
+end;
+$$;
+
+revoke all on function public.delete_my_account(boolean) from public;
+revoke all on function public.delete_my_account(boolean) from anon;
+grant execute on function public.delete_my_account(boolean) to authenticated;
+
+-- ============================================================
 -- Done. Verify with:
 --   select * from public.categories;
 --   select * from storage.buckets where id = 'expense-receipts';

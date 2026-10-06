@@ -48,6 +48,8 @@ public final class SupabaseClient {
         if ("POST".equalsIgnoreCase(method)) {
             request.header("Prefer", "return=representation");
             request.POST(HttpRequest.BodyPublishers.ofString(body == null ? "" : body));
+        } else if ("PUT".equalsIgnoreCase(method)) {
+            request.method("PUT", HttpRequest.BodyPublishers.ofString(body == null ? "" : body));
         } else if ("PATCH".equalsIgnoreCase(method)) {
             request.header("Prefer", "return=representation");
             request.method("PATCH", HttpRequest.BodyPublishers.ofString(body == null ? "" : body));
@@ -61,15 +63,11 @@ public final class SupabaseClient {
         }
 
         try {
-            System.out.println("[Supabase] " + method + " " + endpoint(path));
-            HttpResponse<String> resp = httpClient.send(request.build(), HttpResponse.BodyHandlers.ofString());
-            System.out.println("[Supabase] Response code: " + resp.statusCode());
-            return resp;
+            return httpClient.send(request.build(), HttpResponse.BodyHandlers.ofString());
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             throw new ServiceException("The Supabase request was interrupted.", interrupted);
         } catch (java.io.IOException exception) {
-            System.err.println("[Supabase Error] " + exception.getClass().getName() + ": " + exception.getMessage());
             throw new ServiceException("Unable to reach Supabase (" + exception.getMessage() + "). Check connection.", exception);
         }
     }

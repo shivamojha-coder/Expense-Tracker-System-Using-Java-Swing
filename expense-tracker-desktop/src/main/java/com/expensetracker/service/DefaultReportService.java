@@ -348,9 +348,13 @@ public final class DefaultReportService implements ReportService {
         return cell;
     }
 
-    private static String escapeCsv(String value) {
+    static String escapeCsv(String value) {
         if (value == null) {
             return "";
+        }
+        // Spreadsheets run cells that start with these characters as formulas ("CSV injection").
+        if (!value.isEmpty() && "=+-@\t\r".indexOf(value.charAt(0)) >= 0) {
+            value = "'" + value;
         }
         if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
             return "\"" + value.replace("\"", "\"\"") + "\"";

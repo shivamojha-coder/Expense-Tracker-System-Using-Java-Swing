@@ -55,10 +55,6 @@ public final class ReceiptFileValidator {
         }
     }
 
-    public static void validate(Path file) {
-        validate(file, DEFAULT_MAX_SIZE_BYTES);
-    }
-
     public static String extension(Path file) {
         String name = file == null || file.getFileName() == null
                 ? ""

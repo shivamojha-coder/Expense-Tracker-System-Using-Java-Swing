@@ -6,10 +6,14 @@ import com.expensetracker.model.Expense;
 import com.expensetracker.model.PaymentMethod;
 import com.expensetracker.model.ReceiptStatus;
 import com.expensetracker.model.User;
+import com.expensetracker.repository.BudgetRepository;
 import com.expensetracker.repository.CategoryRepository;
+import com.expensetracker.repository.InMemoryBudgetRepository;
+import com.expensetracker.repository.SupabaseBudgetRepository;
 import com.expensetracker.repository.SupabaseCategoryRepository;
 import com.expensetracker.repository.SupabaseExpenseRepository;
 import com.expensetracker.service.AuthService;
+import com.expensetracker.service.BudgetService;
 import com.expensetracker.service.DefaultReportService;
 import com.expensetracker.service.ExpenseService;
 import com.expensetracker.service.DemoAuthService;
@@ -23,9 +27,15 @@ import com.expensetracker.service.StorageService;
 import com.expensetracker.service.SupabaseExpenseService;
 import com.expensetracker.service.SupabaseStorageService;
 import com.expensetracker.service.Tess4JOcrService;
+import com.expensetracker.settings.Formats;
+import com.expensetracker.settings.SettingsStore;
+import com.expensetracker.settings.UserSettings;
 import com.expensetracker.supabase.SupabaseClient;
 import com.expensetracker.ui.components.MetricCard;
+import javax.swing.JProgressBar;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.table.DefaultTableCellRenderer;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -70,10 +80,10 @@ import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -83,6 +93,9 @@ import java.util.Map;
 import java.util.UUID;
 
 public final class AppFrame extends JFrame {
+    /** Largest amount the database column (numeric(12,2)) can hold. */
+    private static final BigDecimal MAX_AMOUNT = new BigDecimal("9999999999.99");
+
     private final AppConfig config;
     private final User user;
     private final AuthService authService;
@@ -91,6 +104,11 @@ public final class AppFrame extends JFrame {
     private final CategoryRepository categoryRepository;
     private final StorageService storageService;
     private final OcrService ocrService;
+    private final BudgetRepository budgetRepository;
+    private final SettingsStore settingsStore;
+    private final boolean demoMode;
+    private Formats formats;
+    private JLabel userLabel;
     private final JPanel contentPanel = new JPanel(new BorderLayout());
     private final JLabel pageTitle = new JLabel("Dashboard");
 
@@ -115,10 +133,6 @@ public final class AppFrame extends JFrame {
         this.onLogoutCallback = callback;
     }
 
-    public AppFrame(User user, AuthService authService) {
-        this(AppConfig.fromEnvironment(), user, authService);
-    }
-
     public AppFrame(AppConfig config, User user, AuthService authService) {
         this(
                 config,
@@ -126,39 +140,6 @@ public final class AppFrame extends JFrame {
                 authService,
                 buildExpenseService(config, user, authService),
                 buildCategoryRepository(config, authService),
-                buildStorageService(config, user, authService),
-                new Tess4JOcrService(config.maxReceiptSizeBytes())
-        );
-    }
-
-    public AppFrame(
-            User user,
-            AuthService authService,
-            ExpenseService expenseService,
-            CategoryRepository categoryRepository
-    ) {
-        this(
-                AppConfig.fromEnvironment(),
-                user,
-                authService,
-                expenseService,
-                categoryRepository
-        );
-    }
-
-    public AppFrame(
-            AppConfig config,
-            User user,
-            AuthService authService,
-            ExpenseService expenseService,
-            CategoryRepository categoryRepository
-    ) {
-        this(
-                config,
-                user,
-                authService,
-                expenseService,
-                categoryRepository,
                 buildStorageService(config, user, authService),
                 new Tess4JOcrService(config.maxReceiptSizeBytes())
         );
@@ -181,6 +162,14 @@ public final class AppFrame extends JFrame {
         this.categoryRepository = categoryRepository;
         this.storageService = storageService;
         this.ocrService = ocrService;
+        this.demoMode = authService instanceof DemoAuthService;
+        this.budgetRepository = demoMode
+                ? new InMemoryBudgetRepository()
+                : new SupabaseBudgetRepository(new SupabaseClient(config), authService::getAccessToken, user.id());
+        this.settingsStore = new SettingsStore(user.id());
+        this.formats = new Formats(settingsStore.get());
+        this.settingsStore.addListener(updated -> this.formats = new Formats(updated));
+        this.ocrService.useLanguage(settingsStore.get().ocrLanguage());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(1180, 760));
         setSize(1280, 820);
@@ -262,10 +251,17 @@ public final class AppFrame extends JFrame {
         pageTitle.setFont(pageTitle.getFont().deriveFont(Font.BOLD, 22f));
         pageTitle.setForeground(new Color(15, 23, 42));
         topBar.add(pageTitle, BorderLayout.WEST);
-        JLabel userLabel = new JLabel("Personal workspace  •  " + user.email());
+        userLabel = new JLabel();
+        refreshUserLabel();
         userLabel.setForeground(new Color(100, 116, 139));
         topBar.add(userLabel, BorderLayout.EAST);
         return topBar;
+    }
+
+    private void refreshUserLabel() {
+        String name = authService.getDisplayName();
+        userLabel.setText((name == null || name.isBlank() ? "Personal workspace" : name.trim())
+                + "  •  " + user.email());
     }
 
     private JPanel buildSidebar() {
@@ -279,13 +275,22 @@ public final class AppFrame extends JFrame {
         brand.setFont(brand.getFont().deriveFont(Font.BOLD, 20f));
         sidebar.add(brand, BorderLayout.NORTH);
 
-        JPanel navigation = new JPanel(new GridLayout(0, 1, 0, 8));
+        JPanel navigation = new JPanel();
+        navigation.setLayout(new BoxLayout(navigation, BoxLayout.Y_AXIS));
         navigation.setOpaque(false);
         navigation.setBorder(BorderFactory.createEmptyBorder(38, 0, 0, 0));
-        navigation.add(navButton("Dashboard", this::showDashboard));
-        navigation.add(navButton("Expenses", this::showExpenses));
-        navigation.add(navButton("Reports", this::showReports));
-        navigation.add(navButton("Settings", this::showSettings));
+        JButton[] items = {
+                navButton("Dashboard", this::showDashboard),
+                navButton("Expenses", this::showExpenses),
+                navButton("Reports", this::showReports),
+                navButton("Settings", this::showSettings)
+        };
+        for (int i = 0; i < items.length; i++) {
+            if (i > 0) {
+                navigation.add(Box.createVerticalStrut(8));
+            }
+            navigation.add(items[i]);
+        }
         sidebar.add(navigation, BorderLayout.CENTER);
 
         sidebar.add(navButton("Log out", this::handleLogout), BorderLayout.SOUTH);
@@ -303,6 +308,10 @@ public final class AppFrame extends JFrame {
             return;
         }
         authService.logout();
+        leaveToLogin();
+    }
+
+    private void leaveToLogin() {
         dispose();
         if (onLogoutCallback != null) {
             onLogoutCallback.run();
@@ -317,6 +326,10 @@ public final class AppFrame extends JFrame {
         button.setForeground(new Color(203, 213, 225));
         button.setBackground(new Color(30, 41, 59));
         button.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
+        button.setPreferredSize(new Dimension(0, 46));
+        button.setMinimumSize(new Dimension(0, 46));
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        button.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
         button.addActionListener(event -> action.run());
         return button;
     }
@@ -341,10 +354,16 @@ public final class AppFrame extends JFrame {
         metrics.add(countCard);
         metrics.add(highestCard);
 
+        JPanel budgetPanel = new JPanel();
+        budgetPanel.setOpaque(false);
+        budgetPanel.setLayout(new BoxLayout(budgetPanel, BoxLayout.Y_AXIS));
+        budgetPanel.setVisible(false);
+
         JPanel header = new JPanel(new BorderLayout(0, 18));
         header.setOpaque(false);
         header.add(intro, BorderLayout.NORTH);
         header.add(metrics, BorderLayout.CENTER);
+        header.add(budgetPanel, BorderLayout.SOUTH);
         dashboard.add(header, BorderLayout.NORTH);
 
         JPanel recent = new JPanel(new BorderLayout(0, 12));
@@ -364,6 +383,7 @@ public final class AppFrame extends JFrame {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setFillsViewportHeight(true);
         table.setRowHeight(30);
+        table.getColumnModel().getColumn(0).setCellRenderer(dateRenderer());
         recent.add(new JScrollPane(table), BorderLayout.CENTER);
         dashboard.add(recent, BorderLayout.CENTER);
         replaceContent(dashboard);
@@ -371,9 +391,16 @@ public final class AppFrame extends JFrame {
         new SwingWorker<DashboardPageData, Void>() {
             @Override
             protected DashboardPageData doInBackground() {
+                List<com.expensetracker.model.Budget> budgets;
+                try {
+                    budgets = budgetRepository.findAll();
+                } catch (RuntimeException exception) {
+                    budgets = List.of();
+                }
                 return new DashboardPageData(
                         categoryRepository.findAll(),
-                        expenseService.getExpenses(user.id())
+                        expenseService.getExpenses(user.id()),
+                        budgets
                 );
             }
 
@@ -391,6 +418,7 @@ public final class AppFrame extends JFrame {
                             ? "—"
                             : formatAmount(summary.highestExpense().amount()));
                     tableModel.setData(summary.recentExpenses(), data.categories());
+                    showBudgetSummary(budgetPanel, data);
                     dashboardStatus.setText(summary.count() == 0
                             ? "No expenses recorded yet."
                             : summary.count() + " "
@@ -402,6 +430,47 @@ public final class AppFrame extends JFrame {
                 }
             }
         }.execute();
+    }
+
+    /** Shows this month's overall budget and any category budget at or past the alert level. */
+    private void showBudgetSummary(JPanel panel, DashboardPageData data) {
+        panel.removeAll();
+        List<BudgetService.Status> statuses = BudgetService.evaluate(
+                data.budgets(), data.expenses(), data.categories(), YearMonth.now(), settingsStore.get().alertThreshold());
+        List<BudgetService.Status> shown = statuses.stream()
+                .filter(status -> status.categoryId() == null || status.level() != BudgetService.Level.OK)
+                .limit(4)
+                .toList();
+        if (shown.isEmpty()) {
+            panel.setVisible(false);
+            return;
+        }
+        JLabel title = new JLabel("Monthly budget");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 15f));
+        title.setForeground(new Color(15, 23, 42));
+        title.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        panel.add(title);
+        panel.add(Box.createVerticalStrut(8));
+        for (BudgetService.Status status : shown) {
+            JPanel row = new JPanel(new BorderLayout(14, 0));
+            row.setOpaque(false);
+            row.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+            row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+            JLabel name = new JLabel(status.name());
+            name.setPreferredSize(new Dimension(170, 22));
+            JProgressBar bar = new JProgressBar(0, 100);
+            bar.setValue((int) Math.min(100, Math.round(status.percent())));
+            bar.setStringPainted(true);
+            bar.setString(formats.money(status.spent()) + " of " + formats.money(status.limit())
+                    + " (" + Math.round(status.percent()) + "%)");
+            bar.setForeground(SettingsPage.colorFor(status.level()));
+            row.add(name, BorderLayout.WEST);
+            row.add(bar, BorderLayout.CENTER);
+            panel.add(row);
+            panel.add(Box.createVerticalStrut(5));
+        }
+        panel.setVisible(true);
+        panel.revalidate();
     }
 
     private void showExpenses() {
@@ -454,8 +523,8 @@ public final class AppFrame extends JFrame {
         }
         fromDateField = new JTextField();
         toDateField = new JTextField();
-        fromDateField.putClientProperty("JTextField.placeholderText", "YYYY-MM-DD");
-        toDateField.putClientProperty("JTextField.placeholderText", "YYYY-MM-DD");
+        fromDateField.putClientProperty("JTextField.placeholderText", formats.dateHint());
+        toDateField.putClientProperty("JTextField.placeholderText", formats.dateHint());
         addFilterField(filterPanel, constraints, 0, 1, "Category", categoryFilter);
         addFilterField(filterPanel, constraints, 1, 1, "Payment method", paymentFilter);
         addFilterField(filterPanel, constraints, 2, 1, "Receipt status", receiptFilter);
@@ -487,6 +556,8 @@ public final class AppFrame extends JFrame {
         sorter.setComparator(5, String.CASE_INSENSITIVE_ORDER);
         expenseTable.setRowSorter(sorter);
 
+        expenseTable.getColumnModel().getColumn(0).setCellRenderer(dateRenderer());
+        expenseTable.getColumnModel().getColumn(3).setCellRenderer(amountRenderer());
         expenseTable.getColumnModel().getColumn(0).setPreferredWidth(95);
         expenseTable.getColumnModel().getColumn(1).setPreferredWidth(190);
         expenseTable.getColumnModel().getColumn(2).setPreferredWidth(145);
@@ -729,9 +800,9 @@ public final class AppFrame extends JFrame {
             return null;
         }
         try {
-            return LocalDate.parse(value.trim());
+            return formats.parseDate(value);
         } catch (DateTimeParseException exception) {
-            expenseStatus.setText(label + " must use YYYY-MM-DD.");
+            expenseStatus.setText(label + " must use " + formats.dateHint() + ".");
             return null;
         }
     }
@@ -787,7 +858,7 @@ public final class AppFrame extends JFrame {
 
             @Override
             protected Void doInBackground() {
-                deleteResult = ExpenseDeleteWorkflow.delete(expenseService, allExpenses, expense.id());
+                deleteResult = ExpenseDeleteWorkflow.delete(expenseService, storageService, allExpenses, expense.id());
                 return null;
             }
 
@@ -797,11 +868,14 @@ public final class AppFrame extends JFrame {
                     get();
                     if (deleteResult.deleted()) {
                         refreshExpenses(true);
+                        boolean leftover = deleteResult.receiptLeftBehind();
                         JOptionPane.showMessageDialog(
                                 AppFrame.this,
-                                "Expense deleted successfully.",
+                                leftover
+                                        ? "Expense deleted, but its receipt file could not be removed from storage."
+                                        : "Expense deleted successfully.",
                                 "Expense deleted",
-                                JOptionPane.INFORMATION_MESSAGE
+                                leftover ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE
                         );
                     } else {
                         // Keep the failed row in the UI model and surface the service error.
@@ -847,7 +921,7 @@ public final class AppFrame extends JFrame {
         JTextField merchantField = new JTextField(existing == null ? "" : existing.merchant());
         JTextField amountField = new JTextField(existing == null ? "" : existing.amount().toPlainString());
         JTextField dateField = new JTextField(
-                existing == null ? LocalDate.now().toString() : existing.expenseDate().toString()
+                formats.date(existing == null ? LocalDate.now() : existing.expenseDate())
         );
         JComboBox<Category> categoryBox = new JComboBox<>();
         categoryBox.addItem(new Category(null, "Select category"));
@@ -876,11 +950,15 @@ public final class AppFrame extends JFrame {
         if (existing != null) {
             selectCategory(categoryBox, existing.categoryId());
             paymentBox.setSelectedItem(existing.paymentMethod());
+        } else {
+            UserSettings preferences = settingsStore.get();
+            paymentBox.setSelectedItem(preferences.defaultPayment());
+            selectCategoryByName(categoryBox, preferences.defaultCategory());
         }
 
         addFormField(form, constraints, 0, "Merchant / expense title", merchantField);
         addFormField(form, constraints, 2, "Amount", amountField);
-        addFormField(form, constraints, 4, "Expense date (YYYY-MM-DD)", dateField);
+        addFormField(form, constraints, 4, "Expense date (" + formats.dateHint() + ")", dateField);
         addFormField(form, constraints, 6, "Category", categoryBox);
         addFormField(form, constraints, 8, "Payment method", paymentBox);
         addFormField(form, constraints, 10, "Description", new JScrollPane(descriptionArea));
@@ -956,26 +1034,30 @@ public final class AppFrame extends JFrame {
             saveButton.setEnabled(false);
             cancelButton.setEnabled(false);
             saveButton.setText("Saving...");
-            new SwingWorker<ReceiptWorkflow.Result, Void>() {
+            new SwingWorker<SavedExpense, Void>() {
                 @Override
-                protected ReceiptWorkflow.Result doInBackground() {
+                protected SavedExpense doInBackground() {
                     Expense savedExpense = existing == null
                             ? expenseService.createExpense(formExpense)
                             : expenseService.updateExpense(formExpense);
-                    return finishReceiptWorkflow(savedExpense, existing, receiptSelection);
+                    ReceiptWorkflow.Result receipt = finishReceiptWorkflow(savedExpense, existing, receiptSelection);
+                    return new SavedExpense(receipt, budgetAlerts(savedExpense));
                 }
 
                 @Override
                 protected void done() {
                     try {
-                        ReceiptWorkflow.Result receiptResult = get();
+                        SavedExpense saved = get();
+                        ReceiptWorkflow.Result receiptResult = saved.receipt();
                         dialog.dispose();
                         refreshExpenses(false);
+                        boolean alert = !saved.budgetAlerts().isEmpty();
                         JOptionPane.showMessageDialog(
                                 AppFrame.this,
-                                receiptResult.message(),
-                                receiptResult.warning() ? "Expense saved with a receipt warning" : "Expense saved",
-                                receiptResult.warning()
+                                receiptResult.message() + (alert ? "\n\nBudget alert:\n" + saved.budgetAlerts() : ""),
+                                receiptResult.warning() ? "Expense saved with a receipt warning"
+                                        : alert ? "Expense saved - budget alert" : "Expense saved",
+                                receiptResult.warning() || alert
                                         ? JOptionPane.WARNING_MESSAGE
                                         : JOptionPane.INFORMATION_MESSAGE
                         );
@@ -996,6 +1078,41 @@ public final class AppFrame extends JFrame {
         dialog.add(form, BorderLayout.CENTER);
         dialog.add(actions, BorderLayout.SOUTH);
         dialog.setVisible(true);
+    }
+
+    private record SavedExpense(ReceiptWorkflow.Result receipt, String budgetAlerts) {
+    }
+
+    /**
+     * Describes any budget for the expense's month that is now at or past the user's alert level.
+     * Returns an empty string when there is nothing to report or budgets cannot be read.
+     */
+    private String budgetAlerts(Expense saved) {
+        try {
+            List<com.expensetracker.model.Budget> budgets = budgetRepository.findAll();
+            if (budgets.isEmpty()) {
+                return "";
+            }
+            List<BudgetService.Status> statuses = BudgetService.evaluate(
+                    budgets,
+                    expenseService.getExpenses(user.id()),
+                    categoryRepository.findAll(),
+                    YearMonth.from(saved.expenseDate()),
+                    settingsStore.get().alertThreshold());
+            StringBuilder text = new StringBuilder();
+            for (BudgetService.Status status : BudgetService.alertsFor(statuses, saved.categoryId())) {
+                if (text.length() > 0) {
+                    text.append('\n');
+                }
+                text.append("• ").append(status.name()).append(": ")
+                        .append(formats.money(status.spent())).append(" of ").append(formats.money(status.limit()))
+                        .append(" (").append(Math.round(status.percent())).append("%) - ")
+                        .append(status.level() == BudgetService.Level.EXCEEDED ? "over budget" : "close to the limit");
+            }
+            return text.toString();
+        } catch (RuntimeException exception) {
+            return "";
+        }
     }
 
     private void chooseReceipt(
@@ -1038,6 +1155,12 @@ public final class AppFrame extends JFrame {
         selection.localFile = file;
         selection.removeExisting = false;
         updateReceiptControls(selection, receiptLabel, viewButton, removeButton);
+        UserSettings preferences = settingsStore.get();
+        if (!preferences.autoScan()) {
+            ocrStatusLabel.setText("Auto-scan is off (Settings > Receipts & OCR). Enter the details manually.");
+            return;
+        }
+        ocrService.useLanguage(preferences.ocrLanguage());
         ocrStatusLabel.setText("Reading receipt for editable suggestions...");
         attachButton.setEnabled(false);
         new SwingWorker<com.expensetracker.model.OcrResult, Void>() {
@@ -1061,7 +1184,7 @@ public final class AppFrame extends JFrame {
                         suggestions++;
                     }
                     if (result.expenseDate() != null) {
-                        dateField.setText(result.expenseDate().toString());
+                        dateField.setText(formats.date(result.expenseDate()));
                         suggestions++;
                     }
                     ocrStatusLabel.setText(suggestions == 0
@@ -1178,11 +1301,17 @@ public final class AppFrame extends JFrame {
         if (amount.signum() <= 0) {
             throw new IllegalArgumentException("Amount must be greater than zero.");
         }
+        if (amount.stripTrailingZeros().scale() > 2) {
+            throw new IllegalArgumentException("Amount can have at most 2 decimal places.");
+        }
+        if (amount.compareTo(MAX_AMOUNT) > 0) {
+            throw new IllegalArgumentException("Amount is too large.");
+        }
         LocalDate date;
         try {
-            date = LocalDate.parse(dateValue.trim());
+            date = formats.parseDate(dateValue);
         } catch (DateTimeParseException | NullPointerException exception) {
-            throw new IllegalArgumentException("Date must use YYYY-MM-DD.");
+            throw new IllegalArgumentException("Date must use " + formats.dateHint() + ".");
         }
         if (category == null || category.id() == null) {
             throw new IllegalArgumentException("Select a category.");
@@ -1240,6 +1369,18 @@ public final class AppFrame extends JFrame {
         }
     }
 
+    private void selectCategoryByName(JComboBox<Category> box, String name) {
+        if (name == null) {
+            return;
+        }
+        for (int index = 0; index < box.getItemCount(); index++) {
+            if (name.equalsIgnoreCase(box.getItemAt(index).name())) {
+                box.setSelectedIndex(index);
+                return;
+            }
+        }
+    }
+
     private void setExpenseControlsEnabled(boolean enabled) {
         if (refreshButton != null) {
             refreshButton.setEnabled(enabled);
@@ -1273,8 +1414,8 @@ public final class AppFrame extends JFrame {
         LocalDate today = LocalDate.now();
         LocalDate monthStart = today.withDayOfMonth(1);
 
-        JTextField fromField = new JTextField(monthStart.toString(), 9);
-        JTextField toField = new JTextField(today.toString(), 9);
+        JTextField fromField = new JTextField(formats.date(monthStart), 9);
+        JTextField toField = new JTextField(formats.date(today), 9);
         JButton generateBtn = primaryButton("Generate Report");
 
         JButton presetMonth = new JButton("This Month");
@@ -1292,7 +1433,7 @@ public final class AppFrame extends JFrame {
         dateInputs.add(presetYear);
         dateInputs.add(presetAll);
 
-        JPanel exportActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel exportActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         exportActions.setOpaque(false);
         JButton exportCsvBtn = new JButton("Export CSV");
         JButton exportPdfBtn = new JButton("Export PDF");
@@ -1301,8 +1442,9 @@ public final class AppFrame extends JFrame {
         exportActions.add(exportPdfBtn);
         exportActions.add(printBtn);
 
-        topControls.add(dateInputs, BorderLayout.WEST);
-        topControls.add(exportActions, BorderLayout.EAST);
+        // Two rows: the date controls and the export buttons together are wider than the window.
+        topControls.add(dateInputs, BorderLayout.NORTH);
+        topControls.add(exportActions, BorderLayout.SOUTH);
         reports.add(topControls, BorderLayout.NORTH);
 
         JPanel reportContent = new JPanel();
@@ -1396,17 +1538,27 @@ public final class AppFrame extends JFrame {
             }
 
             generateBtn.setEnabled(false);
-            new SwingWorker<ReportService.DetailedReport, Void>() {
+            new SwingWorker<ReportData, Void>() {
                 @Override
-                protected ReportService.DetailedReport doInBackground() {
-                    return reportService.generateDetailedReport(allExpenses, categories, f, t);
+                protected ReportData doInBackground() {
+                    // Load fresh data: this page can be opened before the Expenses page ever fills allExpenses.
+                    List<Category> loadedCategories = categoryRepository.findAll();
+                    List<Expense> loadedExpenses = expenseService.getExpenses(user.id());
+                    return new ReportData(
+                            loadedCategories,
+                            loadedExpenses,
+                            reportService.generateDetailedReport(loadedExpenses, loadedCategories, f, t)
+                    );
                 }
 
                 @Override
                 protected void done() {
                     generateBtn.setEnabled(true);
                     try {
-                        currentReport = get();
+                        ReportData data = get();
+                        categories = data.categories();
+                        allExpenses = data.expenses();
+                        currentReport = data.report();
                         repTotal.setValue(formatAmount(currentReport.totalAmount()));
                         repCount.setValue(String.valueOf(currentReport.count()));
                         repAvg.setValue(formatAmount(currentReport.averageAmount()));
@@ -1417,7 +1569,7 @@ public final class AppFrame extends JFrame {
                         payTableModel.setData(currentReport.paymentBreakdowns());
 
                         // Render Pie Chart
-                        DefaultPieDataset pieDataset = new DefaultPieDataset();
+                        DefaultPieDataset<String> pieDataset = new DefaultPieDataset<>();
                         for (ReportService.CategoryBreakdown cb : currentReport.categoryBreakdowns()) {
                             pieDataset.setValue(cb.categoryName(), cb.totalAmount());
                         }
@@ -1432,7 +1584,7 @@ public final class AppFrame extends JFrame {
                         for (ReportService.PaymentBreakdown pb : currentReport.paymentBreakdowns()) {
                             barDataset.addValue(pb.totalAmount(), "Amount", pb.paymentMethod().displayName());
                         }
-                        JFreeChart barChart = ChartFactory.createBarChart("Payment Methods", "Method", "Amount ($)", barDataset, PlotOrientation.VERTICAL, false, true, false);
+                        JFreeChart barChart = ChartFactory.createBarChart("Payment Methods", "Method", "Amount (" + formats.currencySymbol() + ")", barDataset, PlotOrientation.VERTICAL, false, true, false);
                         payChartPanel.removeAll();
                         payChartPanel.add(new ChartPanel(barChart), BorderLayout.CENTER);
                         payChartPanel.revalidate();
@@ -1447,18 +1599,18 @@ public final class AppFrame extends JFrame {
 
         generateBtn.addActionListener(e -> runReport.run());
         presetMonth.addActionListener(e -> {
-            fromField.setText(today.withDayOfMonth(1).toString());
-            toField.setText(today.toString());
+            fromField.setText(formats.date(today.withDayOfMonth(1)));
+            toField.setText(formats.date(today));
             runReport.run();
         });
         preset30.addActionListener(e -> {
-            fromField.setText(today.minusDays(30).toString());
-            toField.setText(today.toString());
+            fromField.setText(formats.date(today.minusDays(30)));
+            toField.setText(formats.date(today));
             runReport.run();
         });
         presetYear.addActionListener(e -> {
-            fromField.setText(today.withDayOfYear(1).toString());
-            toField.setText(today.toString());
+            fromField.setText(formats.date(today.withDayOfYear(1)));
+            toField.setText(formats.date(today));
             runReport.run();
         });
         presetAll.addActionListener(e -> {
@@ -1543,56 +1695,27 @@ public final class AppFrame extends JFrame {
     }
 
     private void showSettings() {
-        pageTitle.setText("Settings & Configuration");
-        JPanel settings = new JPanel(new BorderLayout());
-        settings.setOpaque(false);
-
-        JPanel formCard = new JPanel(new GridBagLayout());
-        formCard.setBackground(Color.WHITE);
-        formCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(0xE2, 0xE8, 0xF0)),
-                BorderFactory.createEmptyBorder(30, 40, 30, 40)
-        ));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(8, 0, 8, 20);
-        gbc.weightx = 1.0;
-
-        addSettingsRow(formCard, gbc, 0, "Account Email", user.email());
-        addSettingsRow(formCard, gbc, 1, "User ID", user.id().toString());
-        addSettingsRow(formCard, gbc, 2, "Database Provider", config.isSupabaseConfigured() ? "Supabase PostgreSQL" : "Local In-Memory Demo Storage");
-        addSettingsRow(formCard, gbc, 3, "Storage Bucket", config.storageBucket());
-        addSettingsRow(formCard, gbc, 4, "Max Receipt File Size", (config.maxReceiptSizeBytes() / (1024 * 1024)) + " MB");
-        addSettingsRow(formCard, gbc, 5, "OCR Engine", "Tess4J (Tesseract 5.13 Wrapper)");
-        addSettingsRow(formCard, gbc, 6, "Theme Engine", "FlatLaf Light Theme");
-        addSettingsRow(formCard, gbc, 7, "Application Version", "0.1.0-SNAPSHOT (Java 22, Swing)");
-
-        JPanel wrapper = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        wrapper.setOpaque(false);
-        wrapper.add(formCard);
-        settings.add(wrapper, BorderLayout.NORTH);
-        replaceContent(settings);
+        pageTitle.setText("Settings");
+        replaceContent(new SettingsPage(new SettingsPage.Context(
+                this,
+                config,
+                user,
+                authService,
+                demoMode,
+                expenseService,
+                categoryRepository,
+                budgetRepository,
+                storageService,
+                ocrService,
+                reportService,
+                settingsStore,
+                this::handleLogout,
+                this::leaveToLogin,
+                this::refreshUserLabel
+        )));
     }
 
-    private void addSettingsRow(JPanel panel, GridBagConstraints gbc, int row, String label, String value) {
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.weightx = 0.3;
-        JLabel l = new JLabel(label);
-        l.setFont(ThemeColors.FONT_SUBHEADING);
-        l.setForeground(ThemeColors.PRIMARY_TEXT);
-        panel.add(l, gbc);
-
-        gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        JTextField v = new JTextField(value);
-        v.setEditable(false);
-        v.setBackground(new Color(0xF8, 0xFA, 0xFC));
-        panel.add(v, gbc);
-    }
-
-    private static final class CategoryReportTableModel extends AbstractTableModel {
+    private final class CategoryReportTableModel extends AbstractTableModel {
         private final String[] cols = {"Category", "Transactions", "Total Amount", "Share (%)"};
         private List<ReportService.CategoryBreakdown> rows = List.of();
 
@@ -1613,14 +1736,14 @@ public final class AppFrame extends JFrame {
             return switch (c) {
                 case 0 -> b.categoryName();
                 case 1 -> b.count();
-                case 2 -> "$" + b.totalAmount().toPlainString();
+                case 2 -> formatAmount(b.totalAmount());
                 case 3 -> String.format("%.1f%%", b.percentage());
                 default -> "";
             };
         }
     }
 
-    private static final class PaymentReportTableModel extends AbstractTableModel {
+    private final class PaymentReportTableModel extends AbstractTableModel {
         private final String[] cols = {"Payment Method", "Transactions", "Total Amount", "Share (%)"};
         private List<ReportService.PaymentBreakdown> rows = List.of();
 
@@ -1641,7 +1764,7 @@ public final class AppFrame extends JFrame {
             return switch (c) {
                 case 0 -> b.paymentMethod().displayName();
                 case 1 -> b.count();
-                case 2 -> "$" + b.totalAmount().toPlainString();
+                case 2 -> formatAmount(b.totalAmount());
                 case 3 -> String.format("%.1f%%", b.percentage());
                 default -> "";
             };
@@ -1660,7 +1783,30 @@ public final class AppFrame extends JFrame {
     }
 
     private String formatAmount(BigDecimal amount) {
-        return amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        return formats.money(amount);
+    }
+
+    private DefaultTableCellRenderer dateRenderer() {
+        return new DefaultTableCellRenderer() {
+            @Override
+            protected void setValue(Object value) {
+                setText(value instanceof LocalDate date ? formats.date(date) : String.valueOf(value));
+            }
+        };
+    }
+
+    private DefaultTableCellRenderer amountRenderer() {
+        return new DefaultTableCellRenderer() {
+            @Override
+            protected void setValue(Object value) {
+                setHorizontalAlignment(SwingConstants.RIGHT);
+                try {
+                    setText(formats.money(new BigDecimal(String.valueOf(value))));
+                } catch (NumberFormatException exception) {
+                    setText(String.valueOf(value));
+                }
+            }
+        };
     }
 
     private String readableError(Throwable cause, String fallback) {
@@ -1679,7 +1825,18 @@ public final class AppFrame extends JFrame {
     private record ExpensePageData(List<Category> categories, List<Expense> expenses) {
     }
 
-    private record DashboardPageData(List<Category> categories, List<Expense> expenses) {
+    private record ReportData(
+            List<Category> categories,
+            List<Expense> expenses,
+            ReportService.DetailedReport report
+    ) {
+    }
+
+    private record DashboardPageData(
+            List<Category> categories,
+            List<Expense> expenses,
+            List<com.expensetracker.model.Budget> budgets
+    ) {
     }
 
     private record PaymentChoice(PaymentMethod method, String label) {

@@ -4,7 +4,6 @@ import com.expensetracker.model.Expense;
 import com.expensetracker.repository.ExpenseRepository;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 public final class SupabaseExpenseService implements ExpenseService {
@@ -52,18 +51,6 @@ public final class SupabaseExpenseService implements ExpenseService {
                 .orElseThrow(() -> new ServiceException("The expense was not found."));
         requireOwned(expense);
         repository.delete(expenseId);
-    }
-
-    @Override
-    public List<Expense> searchExpenses(UUID userId, String query) {
-        requireCurrentUser(userId);
-        String normalizedQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-        return getExpenses(currentUserId).stream()
-                .filter(expense -> normalizedQuery.isBlank()
-                        || expense.merchant().toLowerCase(Locale.ROOT).contains(normalizedQuery)
-                        || (expense.description() != null
-                        && expense.description().toLowerCase(Locale.ROOT).contains(normalizedQuery)))
-                .toList();
     }
 
     private void requireOwned(Expense expense) {
