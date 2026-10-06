@@ -10,7 +10,7 @@ import java.util.Map;
 /** Image that is down-scaled once per target size (device pixels) and cached. */
 final class SmoothImage {
     private final BufferedImage src;
-    private final Map<String, BufferedImage> shadows = new java.util.HashMap<>();
+    private final Map<String, BufferedImage> shadows = new HashMap<>();
     private BufferedImage cache;
     private int cacheW;
     private int cacheH;

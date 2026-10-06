@@ -18,7 +18,7 @@ import java.util.Map;
 
 /** Renders the Lucide SVG icons in /icons (24x24 grid, stroke style) with Java2D. */
 final class SvgIcons {
-    private static final Map<String, List<Shape>> CACHE = new java.util.HashMap<>();
+    private static final Map<String, List<Shape>> CACHE = new HashMap<>();
 
     private SvgIcons() {
     }
