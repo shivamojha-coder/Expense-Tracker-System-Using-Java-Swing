@@ -9,3 +9,8 @@ target/
 *.log
 .DS_Store
 Thumbs.db
+
+# Local settings and keys: never commit these. Copy .env.example to .env and fill it in.
+.env
+.env.*
+!.env.example
