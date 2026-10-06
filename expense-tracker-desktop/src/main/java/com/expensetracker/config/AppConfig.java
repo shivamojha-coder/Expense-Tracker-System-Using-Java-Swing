@@ -16,10 +16,15 @@ public record AppConfig(
     private static final long DEFAULT_MAX_RECEIPT_SIZE_BYTES = 10 * 1024 * 1024;
     private static final Map<String, String> ENV_FILE_CACHE = loadDotEnv();
 
+    /**
+     * Reads settings from system properties, environment variables or a {@code .env} file (in that order).
+     * The Supabase URL and key have no built-in fallback: without them {@link #isSupabaseConfigured()} is
+     * false and the app offers the offline demo instead of connecting to anything.
+     */
     public static AppConfig fromEnvironment() {
         return new AppConfig(
-                readOrDefault("SUPABASE_URL", "https://gyqujxvriciejibrmsjq.supabase.co"),
-                readOrDefault("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5cXVqeHZyaWNpZWppYnJtc2pxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3ODM0MzAsImV4cCI6MjEwNDM1OTQzMH0.jH85d4G-66FNW96AX8QQhZCnNspb9smzz6Hp2TcmHrs"),
+                read("SUPABASE_URL"),
+                read("SUPABASE_ANON_KEY"),
                 readOrDefault("SUPABASE_STORAGE_BUCKET", "expense-receipts"),
                 readPositiveLongOrDefault(
                         "SUPABASE_RECEIPT_MAX_BYTES",

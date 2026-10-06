@@ -16,7 +16,9 @@ receipt OCR, budgets, reports and an offline demo mode.
 1. Create a Supabase project and run [`supabase/schema.sql`](supabase/schema.sql) once in the SQL editor
    (Dashboard > SQL Editor). It creates the tables, row-level security policies, the receipt storage
    bucket, budgets and the `delete_my_account()` function. It is safe to run again.
-2. Put your project's values in a `.env` file next to `pom.xml` (see Configuration).
+2. Copy `.env.example` to `.env` (next to `pom.xml`) and fill in your project's URL and anon key
+   (see Configuration). `.env` is git-ignored. The app has no built-in Supabase credentials: without
+   them it offers the offline demo instead of connecting anywhere.
 
 ## Run
 
