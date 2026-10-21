@@ -17,6 +17,7 @@ import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -115,6 +116,10 @@ public final class LandingPage extends JPanel {
             }
         });
         add(scrollPane, BorderLayout.CENTER);
+    }
+
+    JPanel getSecuritySection() {
+        return securitySection;
     }
 
     // ==========================================
@@ -529,42 +534,151 @@ public final class LandingPage extends JPanel {
         SecurityPanel sec = new SecurityPanel();
         securitySection = sec;
         sec.setLayout(new GridBagLayout());
-        sec.setBorder(new EmptyBorder(58, 64, 58, 48));
+        sec.setBorder(new EmptyBorder(48, 56, 48, 32));
 
         JPanel text = new JPanel();
         text.setOpaque(false);
         text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
         text.add(Box.createVerticalGlue());
-        text.add(left(new TextLine("YOUR DATA, YOURS", font(Font.BOLD, 12f), new Color(0x7F, 0xE3, 0xB8), 1.4f, 0.14f)));
+
+        // Pill badge "YOUR DATA, YOURS"
+        JPanel badge = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                quality(g2);
+                g2.setColor(new Color(0x06, 0x48, 0x38));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
+                g2.setColor(new Color(0x34, 0xD3, 0x99, 70));
+                g2.setStroke(new BasicStroke(1f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 16, 16);
+                g2.dispose();
+            }
+        };
+        badge.setOpaque(false);
+        badge.setLayout(new FlowLayout(FlowLayout.CENTER, 14, 5));
+        JLabel badgeLabel = new JLabel("YOUR DATA, YOURS");
+        badgeLabel.setFont(font(Font.BOLD, 11f));
+        badgeLabel.setForeground(new Color(0x34, 0xD3, 0x99));
+        badge.add(badgeLabel);
+        badge.setMaximumSize(badge.getPreferredSize());
+        text.add(left(badge));
         text.add(Box.createVerticalStrut(14));
-        text.add(left(new TextLine("Enterprise-Grade Security", font(Font.BOLD, 38f), C_WHITE, 1.15f, -0.02f)));
-        text.add(left(new TextLine("& Complete Privacy", font(Font.BOLD, 38f), C_WHITE, 1.15f, -0.02f)));
+
+        // Heading: white line 1, mint line 2
+        text.add(left(new TextLine("Enterprise-Grade Security", font(Font.BOLD, 36f), C_WHITE, 1.15f, -0.02f)));
+        text.add(left(new TextLine("& Complete Privacy", font(Font.BOLD, 36f), new Color(0x34, 0xD3, 0x99), 1.15f, -0.02f)));
         text.add(Box.createVerticalStrut(14));
+
+        // Subtitle
         text.add(left(new WrappedText(
                 "Every record, receipt scan, and category is protected with modern security standards. "
                         + "Only your authenticated account can access your data, and it never leaves your control.",
-                font(Font.PLAIN, 16f), new Color(0xD3, 0xE6, 0xDD), 1.65f, 520, SwingConstants.LEFT)));
-        text.add(Box.createVerticalStrut(28));
+                font(Font.PLAIN, 15f), new Color(0xC3, 0xDF, 0xD5), 1.6f, 520, SwingConstants.LEFT)));
+        text.add(Box.createVerticalStrut(26));
 
-        Font ff = font(Font.BOLD, 13f);
-        Color ft = new Color(0xE8, 0xF5, 0xEF);
-        Color fi = new Color(0x5E, 0xE0, 0xAE);
-        text.add(left(row(34,
-                new IconLabel("lock", "Row-Level Security (RLS)\nIsolation", ff, ft, fi, 28, 12),
-                new IconLabel("database", "Encrypted Data\nat Rest & in Transit", ff, ft, fi, 28, 12),
-                new IconLabel("laptop", "Local Offline\nDemo Mode", ff, ft, fi, 28, 12))));
+        // 3 Feature Cards
+        JPanel cards = new JPanel(new GridLayout(1, 3, 16, 0));
+        cards.setOpaque(false);
+        cards.setMaximumSize(new Dimension(610, 120));
+        cards.add(securityFeatureCard("lock",
+                "Row-Level Security\n(RLS) Isolation",
+                "Your data is isolated and\naccessible only to you."));
+        cards.add(securityFeatureCard("database",
+                "Encrypted Data\nat Rest & in Transit",
+                "All sensitive information\nis encrypted using industry\nstandards."));
+        cards.add(securityFeatureCard("laptop",
+                "Local Offline\nDemo Mode",
+                "Explore the app safely with\nsample data, no account\nrequired."));
+        text.add(left(cards));
         text.add(Box.createVerticalGlue());
 
         GridBagConstraints c = new GridBagConstraints();
         c.fill = GridBagConstraints.BOTH;
         c.weighty = 1;
         c.gridx = 0;
-        c.weightx = 0.56;
+        c.weightx = 0.54;
         sec.add(text, c);
         c.gridx = 1;
-        c.weightx = 0.44;
+        c.weightx = 0.46;
         sec.add(new ShieldArt(), c);
         return sec;
+    }
+
+    /** Creates a security feature card matching the horizontal header + squircle icon style. */
+    private JPanel securityFeatureCard(String iconName, String title, String description) {
+        JPanel card = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                quality(g2);
+                g2.setColor(new Color(0x06, 0x36, 0x2A, 210));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
+                g2.setColor(new Color(0x34, 0xD3, 0x99, 45));
+                g2.setStroke(new BasicStroke(1f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 16, 16);
+                g2.dispose();
+            }
+        };
+        card.setOpaque(false);
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBorder(new EmptyBorder(14, 14, 12, 14));
+
+        // Top row: icon box + title side-by-side
+        JPanel topRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        topRow.setOpaque(false);
+        topRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JComponent iconBox = new JComponent() {
+            {
+                Dimension d = new Dimension(34, 34);
+                setPreferredSize(d);
+                setMinimumSize(d);
+                setMaximumSize(d);
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                quality(g2);
+                g2.setColor(new Color(0x03, 0x24, 0x1C));
+                g2.fillRoundRect(0, 0, 34, 34, 10, 10);
+                g2.setColor(new Color(0x34, 0xD3, 0x99, 70));
+                g2.setStroke(new BasicStroke(1f));
+                g2.drawRoundRect(0, 0, 33, 33, 10, 10);
+                SvgIcons.paint(g2, iconName, 8, 8, 18, new Color(0x34, 0xD3, 0x99));
+                g2.dispose();
+            }
+        };
+        topRow.add(iconBox);
+
+        JPanel titleCol = new JPanel();
+        titleCol.setOpaque(false);
+        titleCol.setLayout(new BoxLayout(titleCol, BoxLayout.Y_AXIS));
+        Font titleFont = font(Font.BOLD, 12f);
+        Color titleColor = Color.WHITE;
+        for (String line : title.split("\n")) {
+            JLabel lbl = new JLabel(line);
+            lbl.setFont(titleFont);
+            lbl.setForeground(titleColor);
+            lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+            titleCol.add(lbl);
+        }
+        topRow.add(titleCol);
+
+        card.add(topRow);
+        card.add(Box.createVerticalStrut(10));
+
+        Font descFont = font(Font.PLAIN, 10.5f);
+        Color descColor = new Color(0xA0, 0xC4, 0xB6);
+        for (String line : description.split("\n")) {
+            JLabel lbl = new JLabel(line);
+            lbl.setFont(descFont);
+            lbl.setForeground(descColor);
+            lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.add(lbl);
+        }
+        return card;
     }
 
     // ==========================================
@@ -650,8 +764,51 @@ public final class LandingPage extends JPanel {
             int lw = lh * laptop.width() / laptop.height();
             int lx = (int) (w * 0.875) - lw;
             int ly = h - lh - (int) (h * 0.07);
-            laptop.drawShadow(g2, lx, ly, lw, lh, 22, 24, 0.32f);
-            laptop.drawShadow(g2, lx, ly, lw, lh, 6, 8, 0.28f);
+            int baseY = ly + (int) Math.round(lh * 0.983);
+
+            // Soft contact shadow flattened onto the table directly under the laptop base
+            Graphics2D contact = (Graphics2D) g2.create();
+            float radius = lw * 0.52f;
+            contact.translate(lx + lw * 0.52, baseY - lh * 0.008);
+            contact.scale(1.0, 0.085);
+            contact.setPaint(new RadialGradientPaint(
+                    new Point2D.Float(0, 0), radius, new float[]{0f, 0.45f, 0.8f, 1f},
+                    new Color[]{
+                            new Color(30, 22, 14, 160),
+                            new Color(35, 25, 16, 95),
+                            new Color(40, 30, 20, 35),
+                            new Color(40, 30, 20, 0)
+                    }));
+            contact.fill(new Ellipse2D.Float(-radius, -radius, radius * 2, radius * 2));
+            contact.dispose();
+
+            // A tighter contact line shadow right along the bottom metal edge touching the desk
+            Graphics2D tightContact = (Graphics2D) g2.create();
+            float tightRadius = lw * 0.46f;
+            tightContact.translate(lx + lw * 0.51, baseY);
+            tightContact.scale(1.0, 0.035);
+            tightContact.setPaint(new RadialGradientPaint(
+                    new Point2D.Float(0, 0), tightRadius, new float[]{0f, 0.5f, 1f},
+                    new Color[]{
+                            new Color(20, 15, 10, 190),
+                            new Color(25, 18, 12, 90),
+                            new Color(25, 18, 12, 0)
+                    }));
+            tightContact.fill(new Ellipse2D.Float(-tightRadius, -tightRadius, tightRadius * 2, tightRadius * 2));
+            tightContact.dispose();
+
+            // Shadows along the base only (fading in smoothly without vertical edges)
+            for (int band = 0; band < 5; band++) {
+                Graphics2D soft = (Graphics2D) g2.create();
+                soft.clipRect(lx - 30, ly + (int) (lh * (0.82 + band * 0.025)), lw + 60, lh);
+                laptop.drawShadow(soft, lx, ly, lw, lh, 12, 8, 0.12f);
+                soft.dispose();
+            }
+            Graphics2D tight = (Graphics2D) g2.create();
+            tight.clipRect(lx - 30, ly + (int) (lh * 0.90), lw + 60, lh);
+            laptop.drawShadow(tight, lx, ly, lw, lh, 4, 3, 0.50f);
+            tight.dispose();
+
             laptop.draw(g2, lx, ly, lw, lh);
             g2.dispose();
         }
@@ -672,9 +829,6 @@ public final class LandingPage extends JPanel {
         p.add(left(row(14,
                 new ActionButton("Download for Windows  →", null, true, 230, 48, onSignUp),
                 new ActionButton("Log In", null, false, 130, 48, onLogin))));
-        p.add(Box.createVerticalStrut(16));
-        p.add(left(label("No credit card required   •   Offline demo mode available   •   Free to get started",
-                Font.PLAIN, 11.5f, C_TEXT3)));
         return p;
     }
 
@@ -1511,6 +1665,8 @@ public final class LandingPage extends JPanel {
     }
 
     private static final class SecurityPanel extends JPanel {
+        private final SmoothImage bgImage = new SmoothImage(loadImage("/images/security-background.png"));
+
         SecurityPanel() {
             setOpaque(true);
             setBackground(new Color(0x06, 0x3B, 0x2E));
@@ -1524,17 +1680,30 @@ public final class LandingPage extends JPanel {
         @Override
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
+            quality(g2);
+            // Draw gradient base
             g2.setPaint(new LinearGradientPaint(0, 0, getWidth(), 0, new float[]{0f, 0.55f, 1f},
                     new Color[]{new Color(0x05, 0x36, 0x2A), new Color(0x07, 0x4A, 0x39), new Color(0x0B, 0x63, 0x4A)}));
             g2.fillRect(0, 0, getWidth(), getHeight());
+            // Overlay background image (orbit circles + dots)
+            drawCover(g2, bgImage, getWidth(), getHeight());
             g2.dispose();
         }
     }
 
     private static final class ShieldArt extends JComponent {
+        private final SmoothImage shieldImg = new SmoothImage(loadImage("/images/security-shield.png"));
+
+        // Floating cards
+        private static final String[] CARD_LABELS = {
+                "Receipts\nEncrypted", "Supabase\nRLS Security",
+                "Your Data\nStays Yours", "No Unwanted\nData Sharing"
+        };
+        private static final String[] CARD_ICONS = {"receipt", "database", "user", "clock"};
+
         ShieldArt() {
-            setPreferredSize(new Dimension(460, 330));
-            setMinimumSize(new Dimension(300, 300));
+            setPreferredSize(new Dimension(480, 440));
+            setMinimumSize(new Dimension(360, 380));
             setOpaque(false);
         }
 
@@ -1544,86 +1713,214 @@ public final class LandingPage extends JPanel {
             quality(g2);
             int w = getWidth();
             int h = getHeight();
-            int cx = w / 2 + 6;
-            int baseY = (int) (h * 0.76);
 
-            Graphics2D glow = (Graphics2D) g2.create();
-            float rad = w * 0.46f;
-            glow.translate(cx, baseY);
-            glow.scale(1, 0.28);
-            glow.setPaint(new RadialGradientPaint(new Point2D.Float(0, 0), rad, new float[]{0f, 0.55f, 1f},
-                    new Color[]{new Color(70, 235, 190, 150), new Color(30, 190, 150, 60), new Color(30, 190, 150, 0)}));
-            glow.fill(new Ellipse2D.Float(-rad, -rad, rad * 2, rad * 2));
-            glow.dispose();
+            // Calculate exact center matching the background image radar circles
+            int cx = w / 2;
+            int cy = (int) (h * 0.46);
+            int r = (int) (h * 0.35);
 
-            g2.setStroke(new BasicStroke(1.6f));
-            double[] radii = {0.22, 0.33, 0.44};
-            int[] alphas = {170, 100, 55};
-            for (int i = 0; i < radii.length; i++) {
-                double r = radii[i] * w;
-                g2.setColor(new Color(90, 245, 205, alphas[i]));
-                g2.draw(new Ellipse2D.Double(cx - r, baseY - r * 0.28, r * 2, r * 0.56));
+            Container parent = getParent();
+            if (parent != null && parent.getWidth() > 0 && parent.getHeight() > 0) {
+                int pw = parent.getWidth();
+                int ph = parent.getHeight();
+                double scale = Math.max(pw / 1024.0, ph / 409.0);
+                int dw = (int) Math.ceil(1024 * scale);
+                int dh = (int) Math.ceil(409 * scale);
+                int imgX = (pw - dw) / 2;
+                int imgY = ph - dh;
+                int globalCx = imgX + (int) Math.round(813 * scale);
+                int globalCy = imgY + (int) Math.round(204 * scale);
+                cx = globalCx - getX();
+                cy = globalCy - getY();
+                r = (int) Math.round(145 * scale);
             }
 
-            double sw = Math.min(h * 0.60, 220);
-            double sh = sw * 1.18;
-            double y0 = baseY - sh * 0.84;
-            Path2D shield = shieldPath(cx, y0, sw, sh);
-            g2.setPaint(new GradientPaint((float) (cx - sw / 2), (float) y0, new Color(235, 250, 245, 235),
-                    (float) (cx + sw / 2), (float) (y0 + sh), new Color(120, 205, 185, 215)));
-            g2.fill(shield);
-            Path2D inner = shieldPath(cx, y0 + sh * 0.06, sw * 0.82, sh * 0.86);
-            g2.setPaint(new GradientPaint((float) cx, (float) y0, new Color(255, 255, 255, 190),
-                    (float) cx, (float) (y0 + sh), new Color(90, 190, 170, 120)));
-            g2.fill(inner);
-            g2.setColor(new Color(255, 255, 255, 210));
-            g2.setStroke(new BasicStroke(2.6f));
-            g2.draw(shield);
+            // --- 1. Concentric orbit rings ---
+            g2.setColor(new Color(120, 230, 195, 45));
+            g2.setStroke(new BasicStroke(1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND,
+                    10f, new float[]{6f, 8f}, 0f));
+            g2.draw(new Ellipse2D.Float(cx - r, cy - r, r * 2, r * 2));
 
-            double lw = sw * 0.34;
-            double lh = lw * 0.82;
-            double lx = cx - lw / 2;
-            double ly = y0 + sh * 0.43;
-            g2.setStroke(new BasicStroke((float) (lw * 0.15), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            g2.setColor(new Color(0xC4, 0xCC, 0xD0));
-            g2.draw(new Arc2D.Double(lx + lw * 0.2, ly - lh * 0.62, lw * 0.6, lh * 0.9, 0, 180, Arc2D.OPEN));
-            g2.draw(new Line2D.Double(lx + lw * 0.2, ly - lh * 0.17, lx + lw * 0.2, ly));
-            g2.draw(new Line2D.Double(lx + lw * 0.8, ly - lh * 0.17, lx + lw * 0.8, ly));
-            g2.setPaint(new GradientPaint((float) lx, (float) ly, new Color(0xF2, 0xF4, 0xF5),
-                    (float) lx, (float) (ly + lh), new Color(0xA9, 0xB3, 0xB8)));
-            g2.fill(new RoundRectangle2D.Double(lx, ly, lw, lh, 10, 10));
-            g2.setColor(new Color(0x55, 0x60, 0x66));
-            g2.fill(new Ellipse2D.Double(cx - lw * 0.07, ly + lh * 0.28, lw * 0.14, lw * 0.14));
-            g2.fill(new RoundRectangle2D.Double(cx - lw * 0.035, ly + lh * 0.40, lw * 0.07, lh * 0.28, 3, 3));
+            // --- 2. Cardinal Orbit Icon Badges on the dashed circle ---
+            drawOrbitBadge(g2, cx, cy - r, "cloud");       // Top
+            drawOrbitBadge(g2, cx - r, cy, "lock");        // Left
+            drawOrbitBadge(g2, cx + r, cy, "shield");      // Right
+            drawOrbitBadge(g2, cx, cy + r, "database");    // Bottom
 
-            floatingTile(g2, "clock", cx + sw * 0.66, y0 + sh * 0.02, 42, true);
-            floatingTile(g2, "lock", cx - sw * 1.02, y0 + sh * 0.30, 34, false);
-            floatingTile(g2, "file", cx + sw * 0.78, y0 + sh * 0.58, 42, false);
+            // --- 3. 3D Tiered Pedestal at the base of the shield ---
+            int pedY = cy + 56;
+            drawPedestal(g2, cx, pedY);
+
+            // --- 4. Shield PNG Image ---
+            int imgH = (int) (h * 0.53);
+            int imgW = (int) (imgH * ((double) shieldImg.width() / shieldImg.height()));
+            int imgX = cx - imgW / 2;
+            int imgY = pedY - (int) (imgH * 0.76);
+            shieldImg.draw(g2, imgX, imgY, imgW, imgH);
+
+            // --- 5. Floating Cards around the shield ---
+            int cardW = 126;
+            int cardH = 50;
+            // Top-left: "Receipts Encrypted"
+            drawFloatingCard(g2, cx - 180, cy - 90, cardW, cardH, CARD_ICONS[0], CARD_LABELS[0]);
+            // Bottom-left: "Supabase RLS Security"
+            drawFloatingCard(g2, cx - 180, cy + 46, cardW, cardH, CARD_ICONS[1], CARD_LABELS[1]);
+            // Top-right: "Your Data Stays Yours"
+            drawFloatingCard(g2, cx + 56, cy - 90, cardW, cardH, CARD_ICONS[2], CARD_LABELS[2]);
+            // Bottom-right: "No Unwanted Data Sharing"
+            drawFloatingCard(g2, cx + 56, cy + 46, cardW, cardH, CARD_ICONS[3], CARD_LABELS[3]);
+
             g2.dispose();
         }
 
-        private static Path2D shieldPath(double cx, double y0, double w, double h) {
-            Path2D p = new Path2D.Double();
-            p.moveTo(cx, y0);
-            p.curveTo(cx + 0.2 * w, y0 + 0.10 * h, cx + 0.40 * w, y0 + 0.12 * h, cx + 0.5 * w, y0 + 0.12 * h);
-            p.curveTo(cx + 0.5 * w, y0 + 0.55 * h, cx + 0.30 * w, y0 + 0.85 * h, cx, y0 + h);
-            p.curveTo(cx - 0.30 * w, y0 + 0.85 * h, cx - 0.5 * w, y0 + 0.55 * h, cx - 0.5 * w, y0 + 0.12 * h);
-            p.curveTo(cx - 0.40 * w, y0 + 0.12 * h, cx - 0.2 * w, y0 + 0.10 * h, cx, y0);
-            p.closePath();
-            return p;
+        private void drawOrbitBadge(Graphics2D g2, int bx, int by, String iconName) {
+            int d = 30;
+            int x = bx - d / 2;
+            int y = by - d / 2;
+
+            // Outer glow
+            g2.setColor(new Color(52, 211, 153, 40));
+            g2.fillOval(x - 3, y - 3, d + 6, d + 6);
+
+            // Disc background
+            g2.setColor(new Color(0x06, 0x3E, 0x30));
+            g2.fillOval(x, y, d, d);
+
+            // Disc border
+            g2.setColor(new Color(0x34, 0xD3, 0x99, 140));
+            g2.setStroke(new BasicStroke(1.2f));
+            g2.drawOval(x, y, d - 1, d - 1);
+
+            // Icon
+            SvgIcons.paint(g2, iconName, x + 7, y + 7, 16, Color.WHITE);
         }
 
-        private static void floatingTile(Graphics2D g2, String icon, double x, double y, int size, boolean circle) {
-            Shape s = circle
-                    ? new Ellipse2D.Double(x, y, size, size)
-                    : new RoundRectangle2D.Double(x, y, size, size, 12, 12);
-            g2.setColor(new Color(255, 255, 255, 34));
-            g2.fill(s);
-            g2.setColor(new Color(255, 255, 255, 110));
-            g2.setStroke(new BasicStroke(1.2f));
-            g2.draw(s);
-            double is = size * 0.5;
-            SvgIcons.paint(g2, icon, x + (size - is) / 2, y + (size - is) / 2, is, new Color(255, 255, 255, 225));
+        private void drawPedestal(Graphics2D g2, int cx, int topY) {
+            // Ambient base shadow
+            Graphics2D sg = (Graphics2D) g2.create();
+            sg.translate(cx, topY + 36);
+            sg.scale(1.0, 0.35);
+            RadialGradientPaint rgp = new RadialGradientPaint(
+                    new Point2D.Float(0, 0), 120f,
+                    new float[]{0f, 0.6f, 1f},
+                    new Color[]{new Color(0, 20, 15, 180), new Color(0, 20, 15, 80), new Color(0, 20, 15, 0)});
+            sg.setPaint(rgp);
+            sg.fill(new Ellipse2D.Float(-120, -120, 240, 240));
+            sg.dispose();
+
+            // Tier 1 (bottom tier)
+            int bW = 186;
+            int bH = 34;
+            int bX = cx - bW / 2;
+            int bY = topY + 16;
+            // Extrusion body
+            g2.setPaint(new LinearGradientPaint(bX, 0, bX + bW, 0,
+                    new float[]{0f, 0.5f, 1f},
+                    new Color[]{new Color(0x05, 0x2A, 0x20), new Color(0x09, 0x3F, 0x31), new Color(0x05, 0x2A, 0x20)}));
+            g2.fillRect(bX, bY + bH / 2, bW, 14);
+            // Lower ellipse
+            g2.fillOval(bX, bY + 14, bW, bH);
+            // Top ellipse of tier 1
+            g2.setPaint(new LinearGradientPaint(bX, 0, bX + bW, 0,
+                    new float[]{0f, 0.5f, 1f},
+                    new Color[]{new Color(0x07, 0x35, 0x28), new Color(0x0D, 0x4D, 0x3C), new Color(0x07, 0x35, 0x28)}));
+            g2.fillOval(bX, bY, bW, bH);
+
+            // Tier 2 (middle tier)
+            int mW = 154;
+            int mH = 28;
+            int mX = cx - mW / 2;
+            int mY = topY + 8;
+            g2.setPaint(new LinearGradientPaint(mX, 0, mX + mW, 0,
+                    new float[]{0f, 0.5f, 1f},
+                    new Color[]{new Color(0x07, 0x35, 0x28), new Color(0x0F, 0x56, 0x43), new Color(0x07, 0x35, 0x28)}));
+            g2.fillRect(mX, mY + mH / 2, mW, 10);
+            g2.fillOval(mX, mY + 10, mW, mH);
+            g2.setPaint(new LinearGradientPaint(mX, 0, mX + mW, 0,
+                    new float[]{0f, 0.5f, 1f},
+                    new Color[]{new Color(0x09, 0x42, 0x33), new Color(0x13, 0x66, 0x4F), new Color(0x09, 0x42, 0x33)}));
+            g2.fillOval(mX, mY, mW, mH);
+
+            // Tier 3 (top platform with neon glow)
+            int tW = 124;
+            int tH = 24;
+            int tX = cx - tW / 2;
+            int tY = topY;
+            g2.setPaint(new LinearGradientPaint(tX, 0, tX + tW, 0,
+                    new float[]{0f, 0.5f, 1f},
+                    new Color[]{new Color(0x0B, 0x4D, 0x3B), new Color(0x18, 0x7A, 0x5F), new Color(0x0B, 0x4D, 0x3B)}));
+            g2.fillRect(tX, tY + tH / 2, tW, 7);
+            g2.fillOval(tX, tY + 7, tW, tH);
+
+            // Platform glowing surface
+            Graphics2D pg = (Graphics2D) g2.create();
+            pg.translate(cx, tY + tH / 2);
+            pg.scale(1.0, (double) tH / tW);
+            RadialGradientPaint topGlow = new RadialGradientPaint(
+                    new Point2D.Float(0, 0), tW / 2f,
+                    new float[]{0f, 0.65f, 1f},
+                    new Color[]{new Color(0x34, 0xD3, 0x99), new Color(0x10, 0xB9, 0x81), new Color(0x04, 0x5D, 0x45)});
+            pg.setPaint(topGlow);
+            pg.fillOval(-tW / 2, -tW / 2, tW, tW);
+            pg.dispose();
+
+            // Specular rim on top platform
+            g2.setColor(new Color(0x6E, 0xE7, 0xB7, 220));
+            g2.setStroke(new BasicStroke(1.4f));
+            g2.drawOval(tX, tY, tW - 1, tH - 1);
+
+            // Upward light bloom from platform onto the shield
+            Graphics2D bg2 = (Graphics2D) g2.create();
+            bg2.translate(cx, topY);
+            bg2.scale(1.0, 0.6);
+            RadialGradientPaint upBeam = new RadialGradientPaint(
+                    new Point2D.Float(0, 0), 80f,
+                    new float[]{0f, 0.5f, 1f},
+                    new Color[]{new Color(52, 211, 153, 140), new Color(16, 185, 129, 50), new Color(16, 185, 129, 0)});
+            bg2.setPaint(upBeam);
+            bg2.fill(new Ellipse2D.Float(-80, -80, 160, 160));
+            bg2.dispose();
+        }
+
+        private void drawFloatingCard(Graphics2D g2, int px, int py, int cardW, int cardH,
+                                       String icon, String label) {
+            // Card background - semi-transparent glass effect
+            Graphics2D cardG = (Graphics2D) g2.create();
+            quality(cardG);
+            cardG.setColor(new Color(6, 48, 38, 220));
+            cardG.fillRoundRect(px, py, cardW, cardH, 12, 12);
+            cardG.setColor(new Color(52, 211, 153, 60));
+            cardG.setStroke(new BasicStroke(1f));
+            cardG.drawRoundRect(px, py, cardW - 1, cardH - 1, 12, 12);
+
+            // Checkmark circle badge at top-right
+            int checkSize = 16;
+            int checkX = px + cardW - checkSize - 6;
+            int checkY = py + 6;
+            cardG.setColor(new Color(0x10, 0xB9, 0x81));
+            cardG.fillOval(checkX, checkY, checkSize, checkSize);
+            // Draw check mark
+            cardG.setColor(Color.WHITE);
+            cardG.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            cardG.draw(new Line2D.Float(checkX + 4, checkY + 8, checkX + 7, checkY + 11));
+            cardG.draw(new Line2D.Float(checkX + 7, checkY + 11, checkX + 12, checkY + 5));
+
+            // Icon on the left
+            SvgIcons.paint(cardG, icon, px + 10, py + (cardH - 18) / 2.0, 18,
+                    new Color(0x34, 0xD3, 0x99));
+
+            // Text
+            String[] lines = label.split("\n");
+            cardG.setFont(font(Font.BOLD, 10f));
+            cardG.setColor(new Color(0xF0, 0xFD, 0xF4));
+            FontMetrics fm = cardG.getFontMetrics();
+            int textX = px + 34;
+            int textY = py + (cardH - lines.length * fm.getHeight()) / 2 + fm.getAscent();
+            for (String line : lines) {
+                cardG.drawString(line, textX, textY);
+                textY += fm.getHeight();
+            }
+            cardG.dispose();
         }
     }
 
